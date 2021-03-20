@@ -26,7 +26,7 @@
 
 ## 项目预期进度：
 
->了解蒙特卡洛树搜索，掌握MinMax搜索、AlphaBeta剪枝算法
+>了解蒙特卡洛树搜索，掌握MinMax搜索、AlphaBeta剪枝算法（理解散列表、空着剪裁、静态搜索、置换表、AlphaBeta主要变例、位棋盘bitboard）
 
 >阅读开源代码并尝试移植为C++版本（或python）
 
