@@ -51,11 +51,15 @@
 ## 参考资料网址（随时更新）
  [象棋百科全书-计算机博弈](https://www.xqbase.com/computer.htm)
  
- [引擎介绍](https://www.techgrow.cn/posts/26ffa5e3.html)
+ [引擎介绍及源代码](https://www.techgrow.cn/posts/26ffa5e3.html)
  
  [蒙特卡洛1(zfn)](https://github.com/melonedo/mcts-for-checkers)
  
  [蒙特卡洛2](https://github.com/yunfengbasara/MCTS)
+ 
+ [位棋盘、negascout](https://github.com/pengjiu/ChineseChess)
 
+ []()
 ## 图形化界面
- [丑](https://exp.newsmth.net/topic/ed55126a4bc9831c6b148f8c47800fad)
+ 
+ [可加载对弈（需关闭defence）](https://exp.newsmth.net/topic/ed55126a4bc9831c6b148f8c47800fad)
