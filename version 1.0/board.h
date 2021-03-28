@@ -1,6 +1,6 @@
 #include "base.h"
 
-
+//FROM为起始编号 TO为结束编号
 const int32 KING_FROM    = 0;
 const int32 ADVISOR_FROM = 1;
 const int32 ADVISOR_TO   = 2;
@@ -131,10 +131,13 @@ static const int8 ccKnightPin[512] = {
 
 // 帅(将)的步长
 static const int8 ccKingDelta[4] = { -16, -1, 1, 16 };
-// 仕(士)的步长(移动两次当相一次)
+
+// 仕(士)的步长(移动两次当做相移动一次，减少一个数组)
 static const int8 ccAdvisorDelta[4] = { -17, -15, 15, 17 };
+
 // 马的步长，以帅(将)的步长作为马腿
 static const int8 ccKnightDelta[4][2] = { {-33, -31}, {-18, 14}, {-14, 18}, {31, 33} };
+
 // 马被将军的步长，以仕(士)的步长作为马腿
 static const int8 ccKnightCheckDelta[4][2] = { {-33, -18}, {-31, -14}, {14, 31}, {18, 33} };
 
@@ -302,10 +305,29 @@ inline bool AWAY_HALF(int position, int sidePlayer)
 {
 	return (position & 0x80) == (sidePlayer << 7);
 }
+//由RecordMove获得起点坐标
+inline int32 GETBEGIN(int32 Move)
+{
+    return Move&255;
+}
+//由RecordMove获得终点坐标
+inline int32 GETEND(int32 Move) 
+{
+	return Move >> 8;
+}
+inline int32 GETTYPE(int32 chessPiece)
+{
+    return chessPiece&32;
+}
 //终点放在左八位，起点放在右八位
 inline int32 RecordMove(int32 beginPos,int32 endPos)
 {
     return beginPos+(endPos<<8);
+}
+//获取当前坐标编号
+inline uint8 GetOrder(uint8 line,uint8 col)
+{
+    return (line<<4)+col;
 }
 /*
 zobrist hash
@@ -414,13 +436,13 @@ void InitZobrist(void)
 struct MoveStruct 
 {
 	uint16 wmv;//前八位endpos，后八位beginpos
-	//uint8 ucpcCaptured, ucbCheck;//暂时不用
+	uint8 ucpcCaptured, ucbCheck;//capture为被吃子编号
 	uint32 dwKey;//zobrist
 
-	void Set(int mv/*, int pcCaptured, bool bCheck*/, uint32 dwKey_) 
+	void Set(int mv, int pcCaptured/*, bool bCheck*/, uint32 dwKey_) 
     {
 		wmv = mv;
-		//ucpcCaptured = pcCaptured;
+		ucpcCaptured = pcCaptured;
 		//ucbCheck = bCheck;
 		dwKey = dwKey_;
 	}
@@ -433,7 +455,7 @@ struct boardStruct
     /*
     当前棋盘16*16 [3-12][3-11]为棋盘
     16-31  帅仕仕相相马马车车炮炮兵兵兵兵兵(R)
-    32-48  将士士象象马马车车炮炮卒卒卒卒卒(B)
+    32-47  将士士象象马马车车炮炮卒卒卒卒卒(B)
     0表示无棋子
     */
     uint8  currentPosition[48];//每个棋子当前位置，0表示被吃
@@ -454,10 +476,6 @@ struct boardStruct
         memset(currentPosition,0,48);
         zobr.InitZero();
     }
-    uint8 GetOrder(uint8 line,uint8 col)
-    {
-        return (line<<4)+col;
-    }
     //获取当前currentPosition数组
     void GetCurrentPosition()
     {
@@ -472,17 +490,28 @@ struct boardStruct
             }
         }
     }
-    //由fen串获取当前棋盘信息
+    /*
+    void GetCurrentBoard(int8 fenSide,int8 fenBoard[])
+    fenSide 当前玩家方
+    fenBoard 当前棋盘
+    由fen串获取当前棋盘信息
+    */
     void GetCurrentBoard(int8 fenSide,int8 fenBoard[])
     {
         playerSide=fenSide;
         memcpy(currentBoard,fenBoard,8*256);
     }
     
+    /*
+    int32 GenerateMove(int32* movesArray)
+    生成移动方案
+    将移动方案传入moveArray数组，其中终点放在左八位，起点放在右八位
+    返回总的着法数量
+    */
     int32 GenerateMove(int32* movesArray)
     {
         int32 numOfMoves=0;
-        int32 selfSide=SELF_SIDE(playerSide);
+        int32 selfSide=SELF_SIDE(playerSide);//将棋子与之异或以判断归属
         int32 oppoSide=OPPO_SIDE(playerSide);
         for(int32 beginPosition=0;beginPosition<256;beginPosition++)
         {
@@ -513,7 +542,7 @@ struct boardStruct
                             movesArray[numOfMoves++]=RecordMove(beginPosition,endPosition);
                     }
                     break;
-                case BISHOP_FROM:
+                case BISHOP_FROM://象移动
                 case BISHOP_TO:
                     for(int32 i=0;i<4;i++)
                     {
@@ -544,7 +573,7 @@ struct boardStruct
                         }
 				    }
 				break;
-                case ROOK_FROM:
+                case ROOK_FROM://车移动
                 case ROOK_TO:
                     for (int32 i=0;i<4;i++) 
                     {
@@ -559,7 +588,7 @@ struct boardStruct
                         }
                     }
                     break;
-                case CANNON_FROM:
+                case CANNON_FROM://炮移动
                 case CANNON_TO:
                     for (int32 i=0;i<4;i++) 
                     {
@@ -588,7 +617,7 @@ struct boardStruct
                         }//炮可以打的地方
                     }
                     break;
-                default:
+                default://兵移动
                     int32 endPosition = SQUARE_FORWARD(beginPosition, playerSide);
                     if (IN_BOARD(endPosition)) 
                     {
@@ -612,29 +641,164 @@ struct boardStruct
                     break;
             }
         }
-        return numOfMoves;
+        return numOfMoves;//返回着法数量
     }
-    void ChangeSide()//交换走子
+    //交换走子
+    void ChangeSide()
     {
         playerSide=1-playerSide;
         zobr.Xor(Zobrist.Player);
     }
-    //进行一次移动
+
+    /*
+    void DelPiece(int32 pos,int32 chessPiece)
+    移除一个棋子 pos为移除棋子位置，chhessPiece为移除棋子编号
+    尚缺少对局面估值的修改。
+    */
+    void DelPiece(int32 pos,int32 chessPiece)
+    {
+        currentBoard[pos]=0;
+        currentPosition[chessPiece]=0;
+        int32 pieceType=GETTYPE(chessPiece);//棋子方，同playerSide定义相同
+        //...
+        //缺少估值函数
+        //...
+
+    }
+
+    /*
+    void AddPiece(int32 pos,int32 chessPiece)
+    增加一个棋子 pos为增加棋子位置，chhessPiece为增加棋子编号
+    尚缺少对局面估值的修改。
+    */
+    void AddPiece(int32 pos,int32 chessPiece)
+    {
+        currentBoard[pos]=chessPiece;
+        currentPosition[chessPiece]=pos;
+        int32 pieceType=GETTYPE(chessPiece);//棋子方，同playerSide定义相同
+        //...
+        //缺少估值函数
+        //...
+
+    }
+
+    /*
+    void MakeMove(int32 Move)
+    进行一次移动，Move前八位为终点，后八位为起点
+    */
     void MakeMove(int32 Move)
     {
-        uint32 dwKey=zobr.dwKey;
+        uint32 dwKey=zobr.dwKey;//记录局面
         ChangeSide();
-        mvsList[nowMoveNum++].Set(Move, dwKey);
-        nowDepth++;
+        int Capture=0;
+        int32 beginPos,endPos,chessPiece;
+        beginPos=GETBEGIN(mvsList[nowMoveNum].wmv);
+        endPos  =GETEND(mvsList[nowMoveNum].wmv);
+        chessPiece=currentBoard[beginPos];
+        if(currentBoard[endPos])//如果发生吃子，则记录吃子编号，对局面估值进行修改
+        {
+            Capture=currentBoard[endPos];
+            DelPiece(endPos,chessPiece);
+        }
+        DelPiece(beginPos,chessPiece);
+        AddPiece(endPos,chessPiece);
+        
+        mvsList[nowMoveNum++].Set(Move,Capture, dwKey);//在移动列表中加入此次移动信息
+        nowDepth++;//当前搜索深度++
         return;
     }
-    //撤销一次移动
+    /*
+    void UndoMakeMove()
+    撤销一次移动，Move前八位为终点，后八位为起点
+    */
     void UndoMakeMove()
     {
         nowMoveNum--;
         nowDepth--;
         ChangeSide();
-        //to be continue...此部分仍缺少搬棋子函数、撤销搬棋子函数
+        //由于只能从局面得到Zobrist值，并不能从Zobrist值得到局面（存疑）
+        //所以要记录当前撤销着法是否吃子
+        int32 beginPos,endPos,chessPiece;
+        beginPos=GETBEGIN(mvsList[nowMoveNum].wmv);
+        endPos  =GETEND(mvsList[nowMoveNum].wmv);
+        chessPiece=currentBoard[endPos];
+        DelPiece(endPos,chessPiece);
+        AddPiece(beginPos,chessPiece);
+        if(mvsList[nowMoveNum].ucpcCaptured)
+        {
+            int Capture=mvsList[nowMoveNum].ucpcCaptured;
+            AddPiece(endPos,Capture);
+        }
     }
 
+    /*
+    bool InCheck()
+    判断被将军与否，返回true为将军
+    */
+    bool InCheck()
+    {
+        int kingNum=SELF_SIDE(playerSide);//根据palyerSide获取将编号
+        int KingPos=currentPosition[kingNum];
+        int32 selfSide=SELF_SIDE(playerSide);//将棋子与之异或以判断归属
+        int32 oppoSide=OPPO_SIDE(playerSide);
+        //兵将军
+        //获取正前方 将军的兵编号
+        int chessPiece = currentBoard[SQUARE_FORWARD(KingPos, playerSide)];
+	    if ((chessPiece & oppoSide) != 0 && PIECE_INDEX(chessPiece) >= PAWN_FROM)//判断是否为对面兵且过河
+		    return true;
+        //判断左右兵将军
+        for (int nDelta = -1; nDelta <= 1; nDelta += 2) 
+        {
+            chessPiece = currentBoard[KingPos + nDelta];
+            if ((chessPiece & oppoSide) != 0 && PIECE_INDEX(chessPiece) >= PAWN_FROM)
+                return true;
+	    }
+
+        //马将军
+        for (int i = 0; i < 4; i++) 
+        {
+            if (currentBoard[KingPos + ccAdvisorDelta[i]] != 0)//蹩脚
+                continue;
+            for (int j = 0; j < 2; j++) 
+            {
+                chessPiece = currentBoard[KingPos + ccKnightCheckDelta[i][j]];
+                if ((chessPiece & oppoSide) != 0 && (PIECE_INDEX(chessPiece) == KNIGHT_FROM
+                    || PIECE_INDEX(chessPiece) == KNIGHT_TO))
+                    return true;
+		    }
+	    }
+
+        //车、炮
+        for (int i = 0; i < 4; i++)//对应四个方向
+        {
+            int nDelta = ccKingDelta[i];
+            int chessPos = KingPos + nDelta;
+            while (IN_BOARD(chessPos)) 
+            {
+                chessPiece = currentBoard[chessPos];
+                if (chessPiece != 0) //扫描线上第一个棋子
+                {	
+                    if ((chessPiece & oppoSide) != 0 && (PIECE_INDEX(chessPiece) == ROOK_FROM
+                        || PIECE_INDEX(chessPiece) == ROOK_TO))
+                        return true;//为对面车、将
+                    break;
+                }
+                chessPos += nDelta;
+            }
+            chessPos += nDelta;
+            while (IN_BOARD(chessPos)) //若中间有阻拦，则判断炮将军
+            {
+                int chessPiece = currentBoard[chessPos];
+                if (chessPiece != 0) 
+                {	//扫描线上第二个棋子
+                    if ((chessPiece & oppoSide) != 0 && (PIECE_INDEX(chessPiece) == CANNON_FROM
+                        || PIECE_INDEX(chessPiece) == CANNON_TO))
+                        return true;
+                    break;
+                }
+                chessPos += nDelta;
+            }
+        }
+	    return false;
+    }
 };
