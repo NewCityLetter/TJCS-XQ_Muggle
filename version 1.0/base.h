@@ -1,3 +1,6 @@
+#ifndef BASE_H
+#define BASE_H
+
 #include <cstdio>
 #include <cstring>
 #include <iostream>
@@ -15,4 +18,5 @@ typedef long long       int64;
 const int MAX_MOVES = 256;				// 最大的历史走法数
 const int MIN_VAL = -0x7ffffff;         // 最小值
 const int MAX_VAL = 0x7ffffff;          // 最大值
-const int LIMIT_DEPTH = 6;              // 搜索最大深度
+
+#endif

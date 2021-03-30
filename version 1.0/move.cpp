@@ -1,10 +1,11 @@
 #include "board.h"
-// 调整型局面评价函数
-inline int Evaluate(const boardStruct& Board) 
-{
-    int vl = Board.Evaluate();
+/*// 调整型局面评价函数
+inline int Evaluate(const boardStruct& Board) {
+    int vl;
+    vl = Board.Evaluate();
     return vl == Board.DrawValue() ? vl - 1 : vl;
-}
+}*/
+
 /*
 uint32 AlphaBeta(boardStruct & Board)
 传入当前棋盘
@@ -12,8 +13,10 @@ AlphaBeta剪枝
 */
 uint32 AlphaBeta(boardStruct & Board,int Alpha,int Beta)
 {
-    if(Board.nowDepth==LIMIT_DEPTH)
-        return Evaluate(Board);
+    if(Board.nowDepth==0)
+    {
+        return Board.Evaluate();
+    }
     int Val;
     int Moves[MAX_MOVES];
     int numOfMoves=Board.GenerateMove(Moves);

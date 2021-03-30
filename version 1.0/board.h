@@ -5,6 +5,9 @@
 4.增加了boardStruct.Drawvalue作为和棋分值，定义常变量DRAW_VALUE=20；
 5.在move.cpp中增加“调整型局面评价函数”，并在AlphaBeta函数中补齐了return的空缺部分。
 */
+#ifndef BOARD_H
+#define BOARD_H
+
 #include "base.h"
 
 //FROM为起始编号 TO为结束编号
@@ -525,7 +528,14 @@ struct boardStruct
         playerSide=fenSide;
         memcpy(currentBoard,fenBoard,8*256);
     }
-    
+    //初始化红黑双方子力值
+    void InitValue() 
+    {
+        for (int chessPiece = 16; chessPiece < 48; chessPiece++) 
+        {
+            AddPiece(currentPosition[chessPiece], chessPiece);
+        }
+    }
     /*
     int32 GenerateMove(int32* movesArray)
     生成移动方案
@@ -678,11 +688,11 @@ struct boardStruct
     {      
         return (playerSide == 0 ? redVal - blackVal : blackVal - redVal) + ADVANCED_VALUE;
     }
-    //和棋分值
+    /*//和棋分值
     int DrawValue(void) const 
     {                 
         return (nowDepth & 1) == 0 ? -DRAW_VALUE : DRAW_VALUE;
-    }
+    }*/
     /*
     void DelPiece(int32 pos,int32 chessPiece)
     移除一个棋子 pos为移除棋子位置，chhessPiece为移除棋子编号
@@ -847,3 +857,6 @@ struct boardStruct
 	    return false;
     }
 };
+
+
+#endif
