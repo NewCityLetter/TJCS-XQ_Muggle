@@ -13,5 +13,5 @@ struct BestMove
 BestMove AlphaBeta(boardStruct& Board, int Alpha/*initial negative inf*/, int Beta/*initial postive inf*/);
 
 int GetRandomMove(boardStruct& Board);
-
+void PRINT(int Move);
 #endif

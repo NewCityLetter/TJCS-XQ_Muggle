@@ -47,6 +47,11 @@ int main()
 			Moves(UcciComPosit, board.currentBoard);
 			board.GetCurrentPosition();
 			board.playerSide = UcciComPosit.player;
+			/*for (int i = 16; i < 48; i++)
+			{
+				PrintMoves(board.currentPosition[i], getMoves);
+				printf("i=%d pos=%s\n",i, getMoves);
+			}*/
 			board.InitValue();
 
 
@@ -74,7 +79,7 @@ int main()
 					{
 						printf("%d ", 9 - i + 3);
 						continue;
-					}
+					}/**/
 					if (board.currentBoard[(i << 4) + j] == 0)
 						printf("0");
 					printf("%d ", board.currentBoard[(i << 4) + j]);

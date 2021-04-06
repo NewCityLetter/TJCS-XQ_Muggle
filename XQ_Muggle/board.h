@@ -144,16 +144,16 @@ static const int8 ccKnightPin[512] = {
   0,  0,  0,  0,  0,  0,  0
 };
 
-// 帅(将)的步长
+/* 帅(将)的步长*/
 static const int8 ccKingDelta[4] = { -16, -1, 1, 16 };
 
-// 仕(士)的步长(移动两次当做相移动一次，减少一个数组)
+/*仕(士)的步长(移动两次当做相移动一次，减少一个数组)*/
 static const int8 ccAdvisorDelta[4] = { -17, -15, 15, 17 };
 
-// 马的步长，以帅(将)的步长作为马腿
+/*马的步长，以帅(将)的步长作为马腿*/
 static const int8 ccKnightDelta[4][2] = { {-33, -31}, {-18, 14}, {-14, 18}, {31, 33} };
 
-// 马被将军的步长，以仕(士)的步长作为马腿
+/*马被将军的步长，以仕(士)的步长作为马腿*/
 static const int8 ccKnightCheckDelta[4][2] = { {-33, -18}, {-31, -14}, {14, 31}, {18, 33} };
 
 // 子力位置价值表
@@ -283,11 +283,11 @@ static const uint8 cucvlPiecePos[7][256] = {
 /* 棋子序号对应的棋子类型
    每方的棋子顺序依次是：帅仕仕相相马马车车炮炮兵兵兵兵兵(将士士象象马马车车炮炮卒卒卒卒卒)
  */
- /*static const int pieceTypes[48] = {
+ static const int pieceTypes[48] = {
    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
    0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 6, 6, 6,
    0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 6, 6, 6
- };*/
+ };
 
  //获取己方棋子异或信息
 inline int32 SELF_SIDE(int32 sidePlayer)
@@ -305,14 +305,14 @@ inline int32 PIECE_INDEX(int32 chessPiece)
     return chessPiece & 15;
 }
 // 判断棋子是否在九宫中
-inline bool IN_FORT(int sidePlayer)
+inline bool IN_FORT(int pos)
 {
-    return ccInFort[sidePlayer];
+    return ccInFort[pos];
 }
 // 判断棋子是否在棋盘中
-inline bool IN_BOARD(int sidePlayer)
+inline bool IN_BOARD(int pos)
 {
-    return ccInBoard[sidePlayer];
+    return ccInBoard[pos];
 }
 //向前移动一步
 inline int32 SQUARE_FORWARD(int position, int sidePlayer)
@@ -340,17 +340,17 @@ inline int32 GETEND(int32 Move)
     return Move >> 8;
 }
 //判断黑方还是红方，黑方返回1，红方返回0
-/*inline int32 GETTYPE(int32 chessPiece)
+inline int32 GETTYPE(int32 chessPiece)
 {
     return pieceTypes[chessPiece];
-}*/
+}
 //终点放在左八位，起点放在右八位
 inline int32 RecordMove(int32 beginPos, int32 endPos)
 {
     return beginPos + (endPos << 8);
 }
 //获取当前坐标编号
-inline uint8 GetOrder(uint8 line, uint8 col)
+inline uint8 GetOrder(int line, int col)
 {
     return (line << 4) + col;
 }
@@ -363,7 +363,7 @@ inline int SQUARE_FLIP(int pos) {
 struct MoveStruct
 {
     uint16 wmv;//前八位endpos，后八位beginpos
-    uint8 ucpcCaptured, ucbCheck;//capture为被吃子编号
+    uint16 ucpcCaptured, ucbCheck;//capture为被吃子编号
     uint32 dwKey;//zobrist
 
     void Set(int mv, int pcCaptured/*, bool bCheck*/, uint32 dwKey_)
@@ -389,6 +389,7 @@ struct boardStruct
     int32 redVal, blackVal;//红黑棋子的子力价值
     int32 nowDepth, nowMoveNum;
     MoveStruct mvsList[MAX_MOVES];//历史走法信息列表
+    MoveStruct checkMove;
     ZobristStruct zobr;// Zobrist
 
 
@@ -406,12 +407,12 @@ struct boardStruct
     //获取当前currentPosition数组
     void GetCurrentPosition()
     {
-        for (uint8 line = 0x3; line <= 0xc; line++)
+        for (int line = 0x3; line <= 0xc; line++)
         {
-            for (uint8 col = 0x3; col <= 0xb; col++)
+            for (int col = 0x3; col <= 0xb; col++)
             {
-                uint8 nowOrder = GetOrder(line, col);
-                if (currentBoard[nowOrder] != -1)
+                int nowOrder = GetOrder(line, col);
+                if (currentBoard[nowOrder] != 0)
                     currentPosition[currentBoard[nowOrder]] = nowOrder;
                 else currentPosition[currentBoard[nowOrder]] = 0;
             }
@@ -433,7 +434,8 @@ struct boardStruct
     {
         for (int chessPiece = 16; chessPiece < 48; chessPiece++)
         {
-            AddPiece(currentPosition[chessPiece], chessPiece);
+            if(currentPosition[chessPiece])
+                AddPiece(currentPosition[chessPiece], chessPiece);
         }
     }
     /*
@@ -449,6 +451,7 @@ struct boardStruct
         int32 oppoSide = OPPO_SIDE(playerSide);
         for (int32 beginPosition = 0; beginPosition < 256; beginPosition++)
         {
+            if (!ccInBoard[beginPosition])continue;
             int32 chessPieceFrom = currentBoard[beginPosition];
             if (!(chessPieceFrom & selfSide))  continue;
             switch (PIECE_INDEX(chessPieceFrom))
@@ -604,11 +607,11 @@ struct boardStruct
     void DelPiece(int32 pos,int32 chessPiece)
     移除一个棋子 pos为移除棋子位置，chhessPiece为移除棋子编号
     */
-    void DelPiece(int32 pos, int32 chessPiece)
+    void DelPiece(int pos, int chessPiece)
     {
         currentBoard[pos] = 0;
         currentPosition[chessPiece] = 0;
-        int32 pieceType = PIECE_INDEX(chessPiece);//棋子具体类型，数值范围0-6
+        int32 pieceType = GETTYPE(chessPiece);//棋子具体类型，数值范围0-6
         // 红方减分，黑方加分
         if (chessPiece < 32)
         {
@@ -626,11 +629,11 @@ struct boardStruct
     void AddPiece(int32 pos,int32 chessPiece)
     增加一个棋子 pos为增加棋子位置，chhessPiece为增加棋子编号
     */
-    void AddPiece(int32 pos, int32 chessPiece)
+    void AddPiece(int pos, int chessPiece)
     {
         currentBoard[pos] = chessPiece;
         currentPosition[chessPiece] = pos;
-        int32 pieceType = PIECE_INDEX(chessPiece);//棋子具体类型，数值范围0-6
+        int32 pieceType = GETTYPE(chessPiece);//棋子具体类型，数值范围0-6
         // 红方加分，黑方减分
         if (chessPiece < 32)
         {
@@ -656,12 +659,12 @@ struct boardStruct
         if (currentBoard[endPos])//如果发生吃子，则记录吃子编号，对局面估值进行修改
         {
             Capture = currentBoard[endPos];
-            DelPiece(endPos, chessPiece);
+            DelPiece(endPos, Capture);
         }
         DelPiece(beginPos, chessPiece);
         AddPiece(endPos, chessPiece);
 
-        mvsList[nowMoveNum++].Set(Move, Capture, 0);//在移动列表中加入此次移动信息
+        checkMove.Set(Move, Capture, 0);//在移动列表中加入此次移动信息
     }
 
     /*
@@ -669,16 +672,15 @@ struct boardStruct
     */
     void UndoMakeInCheckMove()
     {
-        nowMoveNum--;
         int32 beginPos, endPos, chessPiece;
-        beginPos = GETBEGIN(mvsList[nowMoveNum].wmv);
-        endPos = GETEND(mvsList[nowMoveNum].wmv);
+        beginPos = GETBEGIN(checkMove.wmv);
+        endPos = GETEND(checkMove.wmv);
         chessPiece = currentBoard[endPos];
         DelPiece(endPos, chessPiece);
         AddPiece(beginPos, chessPiece);
-        if (mvsList[nowMoveNum].ucpcCaptured)
+        if (checkMove.ucpcCaptured)
         {
-            int Capture = mvsList[nowMoveNum].ucpcCaptured;
+            int Capture = checkMove.ucpcCaptured;
             AddPiece(endPos, Capture);
         }
     }
@@ -700,7 +702,7 @@ struct boardStruct
         if (currentBoard[endPos])//如果发生吃子，则记录吃子编号，对局面估值进行修改
         {
             Capture = currentBoard[endPos];
-            DelPiece(endPos, chessPiece);
+            DelPiece(endPos, Capture);
         }
         DelPiece(beginPos, chessPiece);
         AddPiece(endPos, chessPiece);

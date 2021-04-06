@@ -6,6 +6,25 @@ inline int Evaluate(const boardStruct& Board) {
     vl = Board.Evaluate();
     return vl == Board.DrawValue() ? vl - 1 : vl;
 }*/
+
+void PRINT(int Move)
+{
+    char moves[5];
+    int endPos = GETEND(Move);
+    int beginPos = GETBEGIN(Move);
+    int beginLine = beginPos >> 4;
+    int beginCol = beginPos & 15;
+    int endLine = endPos >> 4;
+    int endCol = endPos & 15;
+    //char moves[5];
+    moves[0] = beginCol - 3 + 'a';
+    moves[1] = 12 - beginLine + '0';
+    moves[2] = endCol - 3 + 'a';
+    moves[3] = 12 - endLine + '0';
+    moves[4] = '\0';
+    printf("%s\n", moves);
+}
+
 /*
 uint32 AlphaBeta(boardStruct & Board)
 传入当前棋盘
@@ -27,33 +46,16 @@ BestMove AlphaBeta(boardStruct& Board, int Alpha/*initial negative inf*/, int Be
         
     for (int i = 0; i < numOfMoves; i++)//遍历着法
     {
-        if (Board.nowDepth == 0)
-        {
-            printf("depth=0,alpha=%d Beta=%d  Moves=%d  ", Alpha, Beta,Moves[i]);
-            {
-                char moves[5];
-                int Move=Moves[i];
-                int endPos = GETEND(Move);
-                int beginPos = GETBEGIN(Move);
-                int beginLine = beginPos >> 4;
-                int beginCol = beginPos & 15;
-                int endLine = endPos >> 4;
-                int endCol = endPos & 15;
-                //char moves[5];
-                moves[0] = beginCol - 3 + 'a';
-                moves[1] = 12 - beginLine + '0';
-                moves[2] = endCol - 3 + 'a';
-                moves[3] = 12 - endLine + '0';
-                moves[4] = '\0';
-                printf("%s\n", moves);
-
-            }
-            
-        }
         Board.MakeInCheckMove(Moves[i]);
         if (Board.InCheck())
         {
-            if(Board.nowDepth==0)printf("INCHECK! %d\n", Moves[i]);
+            /*if (Board.nowDepth == 0)
+            {
+                printf("INCHECK! ");
+                PRINT(Moves[i]);
+                printf("\n\n");
+            }*/
+                
             Board.UndoMakeInCheckMove();
             continue;
         }
@@ -61,8 +63,19 @@ BestMove AlphaBeta(boardStruct& Board, int Alpha/*initial negative inf*/, int Be
         Board.MakeMove(Moves[i]);
         Val = -AlphaBeta(Board, -Beta, -Alpha).Val;
         Board.UndoMakeMove();
-        if(Board.nowDepth==0)printf(" depth=0 val=%d alpha=%d beta=%d\n", Val,Alpha,Beta);
-        if (Board.nowDepth == 1)printf(" depth=1 val=%d bsetVal=%d alpha=%d beta=%d\n", Val,bestVal, Alpha, Beta);
+        /*if (Board.nowDepth == 0)
+        {
+            printf("depth=0 val=%d alpha=%d beta=%d Moves=", Val, Alpha, Beta, Moves[i]);
+            PRINT(Moves[i]);
+            printf("\n\n");
+        }
+            
+        if (Board.nowDepth == 1)
+        {
+            printf("depth=1 val=%d bsetVal=%d alpha=%d beta=%d\n", Val, bestVal, Alpha, Beta);
+            PRINT(Moves[i]);
+        }*/
+            
         if (Val > bestVal)
         {
             if (Val >= Beta)
