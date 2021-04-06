@@ -1,5 +1,6 @@
 #ifndef LOG_H
 #define LOG_H
+#pragma once
 
 
 #include <string>

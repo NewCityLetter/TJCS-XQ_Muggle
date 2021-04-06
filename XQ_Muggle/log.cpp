@@ -1,4 +1,4 @@
-#include <iostream>
+﻿#include <iostream>
 #include <fstream>
 #include <string>
 #include <stdarg.h>
@@ -10,7 +10,7 @@ void Log::clear()
 	if (out.is_open())
 	{
 		out << __DATE__ << "--" << __TIME__ << ":\n";
-		out << "³ÌÐòÆô¶¯" << std::endl;
+		out << "?¯" << std::endl;
 		out.close();
 	}
 	else out.close();

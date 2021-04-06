@@ -1,12 +1,13 @@
 #ifndef BASE_H
 #define BASE_H
+#pragma once
 
 #include <cstdio>
 #include <cstring>
 #include <iostream>
 #include <algorithm>
 
-//æ•°æ®ç±»å‹é¢„å®šä¹‰
+//Êı¾İÀàĞÍÔ¤¶¨Òå
 typedef char            int8;
 typedef unsigned char   uint8;
 typedef short           int16;
@@ -15,8 +16,9 @@ typedef int             int32;
 typedef unsigned int    uint32;
 typedef long long       int64;
 
-const int MAX_MOVES = 256;				// æœ€å¤§çš„å†å²èµ°æ³•æ•°
-const int MIN_VAL = -0x7ffffff;         // æœ€å°å€¼
-const int MAX_VAL = 0x7ffffff;          // æœ€å¤§å€¼
+const int MAX_MOVES = 512;				// ×î´óµÄÀúÊ·×ß·¨Êı
+const int MIN_VAL = -0x7ffffff;         // ×îĞ¡Öµ
+const int MAX_VAL = 0x7ffffff;          // ×î´óÖµ
+const int DEPTH = 4;                    //×î´óÉî¶È
 
 #endif
