@@ -55,7 +55,7 @@ int main()
 			board.InitValue();
 
 
-			/**/printf("nowPlayer=%d red=%d balck=%d nowVal=%d\n",board.playerSide, board.redVal, board.blackVal,board.Evaluate());
+			printf("nowPlayer=%d red=%d balck=%d nowVal=%d\n",board.playerSide, board.redVal, board.blackVal,board.Evaluate());
 
 			if (board.InCheck())
 			{
@@ -79,12 +79,12 @@ int main()
 					{
 						printf("%d ", 9 - i + 3);
 						continue;
-					}/**/
+					}
 					if (board.currentBoard[(i << 4) + j] == 0)
 						printf("0");
 					printf("%d ", board.currentBoard[(i << 4) + j]);
 					
-				}
+				}/**/
 
 
 		}
@@ -92,11 +92,11 @@ int main()
 		{
 			//
 			int Move = AlphaBeta(board, MIN_VAL, MAX_VAL).BestMove;
-			cout <<"这个着法："<< Move << endl;
+			//cout <<"这个着法："<< Move << endl;
 			PrintMoves(Move, getMoves);
 			std::cout <<"bestmove "<< getMoves << std::endl;
 
-			board.MakeInCheckMove(Move);
+			/*board.MakeInCheckMove(Move);
 			for (int i = 2; i <= 0xc; printf("\n"), i++)
 				for (int j = 2; j <= 0xb; j++)
 				{
@@ -119,7 +119,7 @@ int main()
 						printf("0");
 					printf("%d ", board.currentBoard[(i << 4) + j]);
 
-				}
+				}*/
 
 			fflush(stdout);
 			

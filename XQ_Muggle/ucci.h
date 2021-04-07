@@ -5,7 +5,7 @@
 
 
 const int maxInputLen = 8192; //所接受指令的最大长度
-const int maxMovesNum = 120;
+const int maxMovesNum = 240;
 
 /*所读取到的指令的类型*/
 enum ucciComEnum {

@@ -35,6 +35,8 @@ static bool AnalyPositCom(char* strP, UcciComPositStruct& UcciComPosit)
 	else if (MyStrcasencmp(strP, " startpos", strlen(" startpos")) == 0) 
 	{
 		UcciComPosit.fen = "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR r - - 0 1";
+		strP += strlen("moves");
+		
 	}
 	else 
 	{
@@ -46,7 +48,7 @@ static bool AnalyPositCom(char* strP, UcciComPositStruct& UcciComPosit)
 	{
 		strP += (movesPosit - 1)+strlen(" ");  // strP指针现在指向" moves"后的第一个字符，由于之前strP加了“ fen ”长度，所以抵消
 		//printf("movesPosit=%d  sreing=%s\n", movesPosit,strP);
-		UcciComPosit.movesNum = strlen(strP) / 5;
+		UcciComPosit.movesNum = strlen(strP) / 5;printf("strP=%s len=%d num=%d\n", strP,strlen(strP), UcciComPosit.movesNum);
 		strP++;
 		for (int i = 0; i < UcciComPosit.movesNum; i++) 
 		{
@@ -118,7 +120,7 @@ ucciComEnum IdleCom(UcciComPositStruct& UcciComPosit, UcciComGoTimeStruct& UcciC
 		}
 
 	}
-	else if (MyStrcasencmp(strP, "go time", 7) == 0) 
+	else if (MyStrcasencmp(strP, "go time", 7) == 0||MyStrcasencmp(strP, "go nodes", 8) == 0)
 	{
 		return comGoTime;
 	}
@@ -272,12 +274,12 @@ void Moves(const UcciComPositStruct& UcciComPosit, uint8* currentBoard)
 		colAfterMove = *(p + 2) - 'a' + 3;
 		lineAfterMove = 9 - (*(p + 3)-'0') + 3;
 		//printf("UcciComPosit.movesNum=%d move %d %d %d %d\n", UcciComPosit.movesNum, lineBeforeMove, colBeforeMove, lineAfterMove, colAfterMove);
-		if (currentBoard[CoordXY(lineBeforeMove, colBeforeMove)] != 0
+		/*if (currentBoard[CoordXY(lineBeforeMove, colBeforeMove)] != 0
 			&& currentBoard[CoordXY(lineAfterMove, colAfterMove)]==0) 
-		{
+		{*/
 			currentBoard[CoordXY(lineAfterMove, colAfterMove)] = currentBoard[CoordXY(lineBeforeMove, colBeforeMove)];
 			currentBoard[CoordXY(lineBeforeMove, colBeforeMove)] = 0;
-		}
+		//}
 
 	}
 }
