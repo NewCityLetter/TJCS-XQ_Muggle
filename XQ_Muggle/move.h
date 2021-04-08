@@ -2,6 +2,7 @@
 #define MOVE_H
 #pragma once
 
+#include "base.h"
 #include "board.h"
 
 struct BestMove

@@ -1,7 +1,7 @@
-#include "board.h"
+
 #ifndef HASH_H
 #define HASH_H
-
+#include "board.h"
 const int MATE_VALUE = 10000;           // 将死的分值
 const int WIN_VALUE = MATE_VALUE - 200; // 搜索出胜负的分值界限，超出此值就说明已经搜索出杀棋了
 const int BAN_VALUE = MATE_VALUE - 100;  // 长将判负的分值，用于判断结点是否要写入置换表

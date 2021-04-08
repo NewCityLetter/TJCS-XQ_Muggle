@@ -8,6 +8,9 @@
 using namespace std;
 
 ZobristTable Zobrist;
+int DEPTH = 4;                          //当前搜索深度
+bool isNormalEnd = 1;					//标志当前是否正常弹出
+long long beginSearchTime = 0;          //开始搜索的时间
 
 int main()
 {
@@ -55,13 +58,13 @@ int main()
 			board.InitValue();
 
 
-			/**/printf("nowPlayer=%d red=%d balck=%d nowVal=%d\n", board.playerSide, board.redVal, board.blackVal, board.Evaluate());
+			printf("nowPlayer=%d red=%d balck=%d nowVal=%d\n", board.playerSide, board.redVal, board.blackVal, board.Evaluate());
 
-			if (board.InCheck())
+			/*if (board.InCheck())
 			{
 				printf("IN CHECK!\n");
 			}
-			else printf("NOT IN CHECK!\n");
+			else printf("NOT IN CHECK!\n");*/
 			for (int i = 2; i <= 0xc; printf("\n"), i++)
 				for (int j = 2; j <= 0xb; j++)
 				{
@@ -90,8 +93,17 @@ int main()
 		}
 		else if (com == comGoTime)
 		{
-			//
-			int Move = AlphaBeta(board, MIN_VAL, MAX_VAL).BestMove;
+			int Move = 0;
+			DEPTH = 4;
+			isNormalEnd = 1;
+			beginSearchTime = GetTime();
+			while (isNormalEnd)
+			{
+				int tmpMove = AlphaBeta(board, MIN_VAL, MAX_VAL).BestMove;
+				if (isNormalEnd)
+					Move = tmpMove;
+				DEPTH++;
+			}//迭代加深
 			cout << "这个着法：" << Move << endl;
 			PrintMoves(Move, getMoves);
 			std::cout << "bestmove " << getMoves << std::endl;

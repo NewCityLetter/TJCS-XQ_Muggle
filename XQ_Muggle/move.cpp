@@ -8,6 +8,12 @@ inline int Evaluate(const boardStruct& Board) {
     return vl == Board.DrawValue() ? vl - 1 : vl;
 }*/
 
+//extern int DEPTH = 4;                          //当前搜索深度
+//extern bool isNormalEnd = 1;					//标志当前是否正常弹出
+//extern long long beginSearchTime = 0;          //开始搜索的时间
+
+const long long MAX_TIME = 2000;               //最长搜索时间
+
 void PRINT(int Move)
 {
     char moves[5];
@@ -36,6 +42,11 @@ AlphaBeta剪枝
 */
 BestMove AlphaBeta(boardStruct& Board, int Alpha/*initial negative inf*/, int Beta/*initial postive inf*/)
 {
+    if (GetTime() - beginSearchTime >= MAX_TIME)
+    {
+        isNormalEnd = 0;
+        return {0,0};
+    }
     int hashf = HASH_ALPHA;
     
     //搜索前先在置换表中查找
