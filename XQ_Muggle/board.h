@@ -283,13 +283,13 @@ static const uint8 cucvlPiecePos[7][256] = {
 /* 棋子序号对应的棋子类型
    每方的棋子顺序依次是：帅仕仕相相马马车车炮炮兵兵兵兵兵(将士士象象马马车车炮炮卒卒卒卒卒)
  */
- static const int pieceTypes[48] = {
-   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-   0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 6, 6, 6,
-   0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 6, 6, 6
- };
+static const int pieceTypes[48] = {
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 6, 6, 6,
+  0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 6, 6, 6
+};
 
- //获取己方棋子异或信息
+//获取己方棋子异或信息
 inline int32 SELF_SIDE(int32 sidePlayer)
 {
     return 16 + (sidePlayer << 4);
@@ -434,7 +434,7 @@ struct boardStruct
     {
         for (int chessPiece = 16; chessPiece < 48; chessPiece++)
         {
-            if(currentPosition[chessPiece])
+            if (currentPosition[chessPiece])
                 AddPiece(currentPosition[chessPiece], chessPiece);
         }
     }
@@ -465,7 +465,7 @@ struct boardStruct
                     int32 chessPieceTo = currentBoard[endPosition];
                     if (!(chessPieceTo & selfSide))
                         movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
-                        
+
                 }
                 break;
             case ADVISOR_FROM://士移动
@@ -520,14 +520,14 @@ struct boardStruct
                     {
                         int32 chessPieceTo = currentBoard[endPosition];
                         if (chessPieceTo & selfSide)break;
-                        if(chessPieceTo==0)
+                        if (chessPieceTo == 0)
                             movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
-                        else if(chessPieceTo & oppoSide)
+                        else if (chessPieceTo & oppoSide)
                         {
                             movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
                             break;
                         }
-                            
+
                         endPosition += ccKingDelta[i];
                     }
                 }
@@ -616,12 +616,12 @@ struct boardStruct
         if (chessPiece < 32)
         {
             redVal -= cucvlPiecePos[pieceType][pos];
-            //zobr.Xor(Zobrist.Table[pieceType][pos]);
+            zobr.Xor(Zobrist.Table[pieceType][pos]);
         }
         else
         {
             blackVal -= cucvlPiecePos[pieceType][SQUARE_FLIP(pos)];//取值颠倒
-            //zobr.Xor(Zobrist.Table[pieceType + 7][pos]);
+            zobr.Xor(Zobrist.Table[pieceType + 7][pos]);
         }
     }
 
@@ -638,12 +638,12 @@ struct boardStruct
         if (chessPiece < 32)
         {
             redVal += cucvlPiecePos[pieceType][pos];
-            //zobr.Xor(Zobrist.Table[pieceType][pos]);
+            zobr.Xor(Zobrist.Table[pieceType][pos]);
         }
         else
         {
             blackVal += cucvlPiecePos[pieceType][SQUARE_FLIP(pos)];//取值颠倒
-            //zobr.Xor(Zobrist.Table[pieceType + 7][pos]);
+            zobr.Xor(Zobrist.Table[pieceType + 7][pos]);
         }
     }
     /*
@@ -651,7 +651,7 @@ struct boardStruct
     */
     void MakeInCheckMove(int Move)
     {
-        int Capture=0;
+        int Capture = 0;
         int32 beginPos, endPos, chessPiece;
         beginPos = GETBEGIN(Move);
         endPos = GETEND(Move);
@@ -783,7 +783,7 @@ struct boardStruct
                 if (chessPiece != 0) //扫描线上第一个棋子
                 {
                     if ((chessPiece & oppoSide) != 0 && (PIECE_INDEX(chessPiece) == ROOK_FROM
-                        || PIECE_INDEX(chessPiece) == ROOK_TO|| PIECE_INDEX(chessPiece) == KING_FROM))
+                        || PIECE_INDEX(chessPiece) == ROOK_TO || PIECE_INDEX(chessPiece) == KING_FROM))
                         return true;//为对面车
                     break;
                 }

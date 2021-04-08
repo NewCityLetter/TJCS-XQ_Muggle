@@ -12,13 +12,13 @@
 inline int MyStrcasencmp(const char s1[], const char s2[], const int len)
 {
 	int i;
-	for (i = 0; i < len && (s2[i] != '\0' || s1[i] != '\0'); i++) 
+	for (i = 0; i < len && (s2[i] != '\0' || s1[i] != '\0'); i++)
 	{
 		if (s1[i] != s2[i])
 		{
 			if (((s1[i] >= 'a' && s1[i] <= 'z') || (s1[i] >= 'A' && s1[i] <= 'Z')) &&
 				((s2[i] >= 'a' && s2[i] <= 'z') || (s2[i] >= 'A' && s2[i] <= 'Z')) &&
-				((s1[i] - s2[i] == 'A'-'a') || (s1[i] - s2[i] == 'a' - 'A')))
+				((s1[i] - s2[i] == 'A' - 'a') || (s1[i] - s2[i] == 'a' - 'A')))
 				continue;
 
 			else

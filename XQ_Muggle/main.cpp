@@ -17,8 +17,8 @@ int main()
 	UcciComPositStruct UcciComPosit;
 	UcciComGoTimeStruct UcciComGoTime;
 	char getMoves[5];
-
-	if (BootCom()!= comUcci) 
+	InitZobrist();
+	if (BootCom() != comUcci)
 	{
 		return 0;
 	}
@@ -31,16 +31,16 @@ int main()
 		std::cout << "ucciok" << std::endl;
 		fflush(stdout);
 	}
-	while (!isQuit) 
+	while (!isQuit)
 	{
-		
+
 		ucciComEnum com = IdleCom(UcciComPosit, UcciComGoTime);
-		if (com == comIsready) 
+		if (com == comIsready)
 		{
 			std::cout << "readyok" << std::endl;
 			fflush(stdout);
 		}
-		else if (com == comPositon) 
+		else if (com == comPositon)
 		{
 			board.ClearBoard();
 			Board(UcciComPosit, board.currentBoard);
@@ -55,7 +55,7 @@ int main()
 			board.InitValue();
 
 
-			printf("nowPlayer=%d red=%d balck=%d nowVal=%d\n",board.playerSide, board.redVal, board.blackVal,board.Evaluate());
+			/**/printf("nowPlayer=%d red=%d balck=%d nowVal=%d\n", board.playerSide, board.redVal, board.blackVal, board.Evaluate());
 
 			if (board.InCheck())
 			{
@@ -79,24 +79,24 @@ int main()
 					{
 						printf("%d ", 9 - i + 3);
 						continue;
-					}
+					}/**/
 					if (board.currentBoard[(i << 4) + j] == 0)
 						printf("0");
 					printf("%d ", board.currentBoard[(i << 4) + j]);
-					
-				}/**/
+
+				}
 
 
 		}
-		else if (com == comGoTime) 
+		else if (com == comGoTime)
 		{
 			//
 			int Move = AlphaBeta(board, MIN_VAL, MAX_VAL).BestMove;
-			//cout <<"这个着法："<< Move << endl;
+			cout << "这个着法：" << Move << endl;
 			PrintMoves(Move, getMoves);
-			std::cout <<"bestmove "<< getMoves << std::endl;
+			std::cout << "bestmove " << getMoves << std::endl;
 
-			/*board.MakeInCheckMove(Move);
+			board.MakeInCheckMove(Move);
 			for (int i = 2; i <= 0xc; printf("\n"), i++)
 				for (int j = 2; j <= 0xb; j++)
 				{
@@ -119,12 +119,12 @@ int main()
 						printf("0");
 					printf("%d ", board.currentBoard[(i << 4) + j]);
 
-				}*/
+				}
 
 			fflush(stdout);
-			
+
 		}
-		else if (com == comQuit) 
+		else if (com == comQuit)
 		{
 			isQuit = true;
 		}

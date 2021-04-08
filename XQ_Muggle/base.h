@@ -19,6 +19,6 @@ typedef long long       int64;
 const int MAX_MOVES = 512;				// 最大的历史走法数
 const int MIN_VAL = -0x7ffffff;         // 最小值
 const int MAX_VAL = 0x7ffffff;          // 最大值
-const int DEPTH = 4;                    //最大深度
+const int DEPTH = 6;                    //最大深度
 
 #endif

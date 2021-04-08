@@ -24,33 +24,33 @@ extern char fetFenMoves[5];
 static bool AnalyPositCom(char* strP, UcciComPositStruct& UcciComPosit)
 {
 	int movesPosit = MyStrstr(strP, " moves");
-	if (MyStrcasencmp(strP, " fen ", strlen(" fen ")) == 0) 
+	if (MyStrcasencmp(strP, " fen ", strlen(" fen ")) == 0)
 	{
 		strP += strlen(" fen ");
-		
+
 		int m = movesPosit == 0 ? strlen(strP) : movesPosit - 1;
 		memcpy(chFen, strP, m);
 		UcciComPosit.fen = chFen;
 	}
-	else if (MyStrcasencmp(strP, " startpos", strlen(" startpos")) == 0) 
+	else if (MyStrcasencmp(strP, " startpos", strlen(" startpos")) == 0)
 	{
 		UcciComPosit.fen = "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR r - - 0 1";
 		strP += strlen("moves");
-		
+
 	}
-	else 
+	else
 	{
 		return false;
 	}
 	UcciComPosit.movesNum = 0;
 	//printf("movesPosit=%d  sreing=%s\n", movesPosit, strP);
-	if (movesPosit != 0) 
+	if (movesPosit != 0)
 	{
-		strP += (movesPosit - 1)+strlen(" ");  // strP指针现在指向" moves"后的第一个字符，由于之前strP加了“ fen ”长度，所以抵消
+		strP += (movesPosit - 1) + strlen(" ");  // strP指针现在指向" moves"后的第一个字符，由于之前strP加了“ fen ”长度，所以抵消
 		//printf("movesPosit=%d  sreing=%s\n", movesPosit,strP);
-		UcciComPosit.movesNum = strlen(strP) / 5;printf("strP=%s len=%d num=%d\n", strP,strlen(strP), UcciComPosit.movesNum);
+		UcciComPosit.movesNum = strlen(strP) / 5; printf("strP=%s len=%d num=%d\n", strP, strlen(strP), UcciComPosit.movesNum);
 		strP++;
-		for (int i = 0; i < UcciComPosit.movesNum; i++) 
+		for (int i = 0; i < UcciComPosit.movesNum; i++)
 		{
 			movesList[i] = *((uint32_t*)strP);
 			strP += 5;
@@ -97,34 +97,34 @@ ucciComEnum IdleCom(UcciComPositStruct& UcciComPosit, UcciComGoTimeStruct& UcciC
 	char readStr[maxInputLen];
 	char* strP;
 	cin.getline(readStr, maxInputLen);
-	
+
 	strP = readStr;
 	Log a;
 	a.baseMsg();
 	a.error(strP);
 
-	if (MyStrcasencmp(strP, "isready", 7) == 0) 
+	if (MyStrcasencmp(strP, "isready", 7) == 0)
 	{
 		return comIsready;
 	}
-	else if (MyStrcasencmp(strP, "position", 8) == 0) 
+	else if (MyStrcasencmp(strP, "position", 8) == 0)
 	{
 		strP += strlen("position");
-		if (AnalyPositCom(strP, UcciComPosit)) 
+		if (AnalyPositCom(strP, UcciComPosit))
 		{
 			return comPositon;
 		}
-		else 
+		else
 		{
 			return comUnkown;
 		}
 
 	}
-	else if (MyStrcasencmp(strP, "go time", 7) == 0||MyStrcasencmp(strP, "go nodes", 8) == 0)
+	else if (MyStrcasencmp(strP, "go time", 7) == 0 || MyStrcasencmp(strP, "go nodes", 8) == 0)
 	{
 		return comGoTime;
 	}
-	else if (MyStrcasencmp(strP, "quit", 4) == 0) 
+	else if (MyStrcasencmp(strP, "quit", 4) == 0)
 	{
 		return comQuit;
 	}
@@ -188,12 +188,12 @@ static int JudgeChess(char ch)
 void Board(UcciComPositStruct& UcciComPosit, uint8* currentBoard)
 {
 	const char* strP = UcciComPosit.fen;
-	int i, j,spe;//x坐标，y坐标，棋子的种类
+	int i, j, spe;//x坐标，y坐标，棋子的种类
 	//int8 currentBoard[256];
 	int pcRed[7];
 	int pcBlack[7];
 	const int addNum = 16;
-	pcRed[0] = addNum+ KING_FROM;  //帅
+	pcRed[0] = addNum + KING_FROM;  //帅
 	pcRed[1] = addNum + ADVISOR_FROM;//仕
 	pcRed[2] = addNum + BISHOP_FROM;//相
 	pcRed[3] = addNum + KNIGHT_FROM;//马
@@ -248,8 +248,8 @@ void Board(UcciComPositStruct& UcciComPosit, uint8* currentBoard)
 			break;
 
 	}
-	 
-	UcciComPosit.player = (UcciComPosit.movesNum+(( *(strP + 1) == 'b') ? 1 : 0))%2;
+
+	UcciComPosit.player = (UcciComPosit.movesNum + ((*(strP + 1) == 'b') ? 1 : 0)) % 2;
 
 }
 
@@ -265,20 +265,20 @@ void Moves(const UcciComPositStruct& UcciComPosit, uint8* currentBoard)
 	int i;
 	//int fourthBit, thirdBit, secondBit, firstBit;  //一个uint32_t数从右到左的第四位，第三位，第二位，第一位
 	int lineBeforeMove, colBeforeMove, lineAfterMove, colAfterMove;
-	for (i = 0; i < UcciComPosit.movesNum; i++) 
+	for (i = 0; i < UcciComPosit.movesNum; i++)
 	{
 		//fourthBit = UcciComPosit.followUpMoves[i] / 1000;
 		char* p = (char*)(UcciComPosit.followUpMoves) + 4 * i;
 		colBeforeMove = *p - 'a' + 3;
-		lineBeforeMove = 9 - (*(p+1)-'0') + 3;
+		lineBeforeMove = 9 - (*(p + 1) - '0') + 3;
 		colAfterMove = *(p + 2) - 'a' + 3;
-		lineAfterMove = 9 - (*(p + 3)-'0') + 3;
+		lineAfterMove = 9 - (*(p + 3) - '0') + 3;
 		//printf("UcciComPosit.movesNum=%d move %d %d %d %d\n", UcciComPosit.movesNum, lineBeforeMove, colBeforeMove, lineAfterMove, colAfterMove);
 		/*if (currentBoard[CoordXY(lineBeforeMove, colBeforeMove)] != 0
-			&& currentBoard[CoordXY(lineAfterMove, colAfterMove)]==0) 
+			&& currentBoard[CoordXY(lineAfterMove, colAfterMove)]==0)
 		{*/
-			currentBoard[CoordXY(lineAfterMove, colAfterMove)] = currentBoard[CoordXY(lineBeforeMove, colBeforeMove)];
-			currentBoard[CoordXY(lineBeforeMove, colBeforeMove)] = 0;
+		currentBoard[CoordXY(lineAfterMove, colAfterMove)] = currentBoard[CoordXY(lineBeforeMove, colBeforeMove)];
+		currentBoard[CoordXY(lineBeforeMove, colBeforeMove)] = 0;
 		//}
 
 	}
@@ -330,9 +330,9 @@ static char NumberToChar(int8 number)
   返 回 值：
   说    明：
 ***************************************************************************/
-void GenerateFen(const int8* currentBoard,const UcciComPositStruct UcciComPosit)
+void GenerateFen(const int8* currentBoard, const UcciComPositStruct UcciComPosit)
 {
-	int i, j,m=0,n;
+	int i, j, m = 0, n;
 	char chFen[maxInputLen];
 	for (j = 3; j <= 12; j++) {
 		for (i = 3; i <= 11; i++) {
@@ -343,12 +343,12 @@ void GenerateFen(const int8* currentBoard,const UcciComPositStruct UcciComPosit)
 				}
 			}
 			else {
-				for (n = 0; currentBoard[CoordXY(j, i+n)]==0&& i + n<=11; n++) {
+				for (n = 0; currentBoard[CoordXY(j, i + n)] == 0 && i + n <= 11; n++) {
 					;
 				}
 				chFen[m] = n;
 				m++;
-				i += n-1;
+				i += n - 1;
 			}
 
 		}
@@ -367,7 +367,7 @@ void GenerateFen(const int8* currentBoard,const UcciComPositStruct UcciComPosit)
   返 回 值：转换成的字符串
   说    明：
 ***************************************************************************/
-void PrintMoves(int Move,char*moves)
+void PrintMoves(int Move, char* moves)
 {
 	int endPos = GETEND(Move);
 	int beginPos = GETBEGIN(Move);
@@ -377,11 +377,11 @@ void PrintMoves(int Move,char*moves)
 	int endCol = endPos & 15;
 	//char moves[5];
 	moves[0] = beginCol - 3 + 'a';
-	moves[1] = 12 - beginLine+'0';
+	moves[1] = 12 - beginLine + '0';
 	moves[2] = endCol - 3 + 'a';
-	moves[3] = 12 - endLine+'0';
+	moves[3] = 12 - endLine + '0';
 	moves[4] = '\0';
-	return ;
+	return;
 }
 
 

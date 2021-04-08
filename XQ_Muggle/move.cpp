@@ -1,5 +1,6 @@
 #include "move.h"
 #include "ucci.h"
+#include "hash.h"
 /*// 调整型局面评价函数
 inline int Evaluate(const boardStruct& Board) {
     int vl;
@@ -35,15 +36,28 @@ AlphaBeta剪枝
 */
 BestMove AlphaBeta(boardStruct& Board, int Alpha/*initial negative inf*/, int Beta/*initial postive inf*/)
 {
+    int hashf = HASH_ALPHA;
+    
+    //搜索前先在置换表中查找
+    int mv;
+    int vl = LookUpHash(Board, Alpha, Beta, Board.nowDepth, mv);
+    if (vl > -MATE_VALUE)
+    {
+        //std::cout << "分值：" << vl << " 着法：" << mv << '\n';
+        if (mv == 0 && Board.nowDepth || mv != 0)
+            return { vl,mv };
+    }
+    //搜索
     if (Board.nowDepth == DEPTH)
     {
         //printf("%d ", Board.Evaluate());
-        return {Board.Evaluate(), 0};
+        StoreHash(Board, HASH_PV, 0, Board.Evaluate(), DEPTH);
+        return { Board.Evaluate(), 0 };
     }
-    int Val=0,bestVal=MIN_VAL,bestMove=0;
+    int Val = 0, bestVal = MIN_VAL, bestMove = 0;
     int Moves[MAX_MOVES];
     int numOfMoves = Board.GenerateMove(Moves);
-        
+
     for (int i = 0; i < numOfMoves; i++)//遍历着法
     {
         Board.MakeInCheckMove(Moves[i]);
@@ -55,7 +69,7 @@ BestMove AlphaBeta(boardStruct& Board, int Alpha/*initial negative inf*/, int Be
                 PRINT(Moves[i]);
                 printf("\n\n");
             }*/
-                
+
             Board.UndoMakeInCheckMove();
             continue;
         }
@@ -69,28 +83,34 @@ BestMove AlphaBeta(boardStruct& Board, int Alpha/*initial negative inf*/, int Be
             PRINT(Moves[i]);
             printf("\n\n");
         }
-            
+
         if (Board.nowDepth == 1)
         {
             printf("depth=1 val=%d bsetVal=%d alpha=%d beta=%d\n", Val, bestVal, Alpha, Beta);
             PRINT(Moves[i]);
         }*/
-            
+
         if (Val > bestVal)
         {
             if (Val >= Beta)
+            {
+                StoreHash(Board, HASH_BETA, Moves[i], Val, Board.nowDepth);//添加置换项
                 return { Val, Moves[i] };
+            }
             bestVal = Val;
             bestMove = Moves[i];
             if (Val > Alpha)
+            {
+                hashf = HASH_PV;
                 Alpha = Val;
+            }
         }
-        
     }
-    return {bestVal,bestMove};
+    StoreHash(Board, hashf, bestMove, bestVal, Board.nowDepth);//添加置换项
+    return { bestVal,bestMove };
 }
 
-int GetRandomMove(boardStruct& Board) 
+int GetRandomMove(boardStruct& Board)
 {
     int Moves[MAX_MOVES];
     Board.GenerateMove(Moves);
