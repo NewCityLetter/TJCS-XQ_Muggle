@@ -27,9 +27,9 @@ static bool CompareMvvLva(const int a, const int b)
 	return MvvLva(a) > MvvLva(b);
 }
 
-inline int SortMove(boardStruct board, int* Moves)
+inline int SortMove(boardStruct board, int* Moves,bool capture=0)
 {
-	int numOfMoves = board.GenerateMove(Moves);
+	int numOfMoves = board.GenerateMove(Moves,capture);
 	std::sort(Moves, Moves + numOfMoves, CompareMvvLva);
 	return numOfMoves;
 }	

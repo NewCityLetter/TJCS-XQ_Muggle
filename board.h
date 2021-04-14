@@ -439,12 +439,13 @@ struct boardStruct
         }
     }
     /*
-    int32 GenerateMove(int32* movesArray)
+      int32 GenerateMove(int32* movesArray,bool capture=0)
     生成移动方案
     将移动方案传入moveArray数组，其中终点放在左八位，起点放在右八位
     返回总的着法数量
+    capture默认为0，表示生成所有方式，1为生成吃子
     */
-    int32 GenerateMove(int32* movesArray)
+    int32 GenerateMove(int32* movesArray,bool capture=0)
     {
         int32 numOfMoves = 0;
         int32 selfSide = SELF_SIDE(playerSide);//将棋子与之异或以判断归属
@@ -464,7 +465,17 @@ struct boardStruct
                         continue;
                     int32 chessPieceTo = currentBoard[endPosition];
                     if (!(chessPieceTo & selfSide))
-                        movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                    {
+                        if (!capture)
+                        {
+                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                        else
+                        {
+                            if(chessPieceTo&oppoSide)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                    }
 
                 }
                 break;
@@ -477,7 +488,17 @@ struct boardStruct
                         continue;
                     int32 chessPieceTo = currentBoard[endPosition];
                     if (!(chessPieceTo & selfSide))
-                        movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                    {
+                        if (!capture)
+                        {
+                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                        else
+                        {
+                            if (chessPieceTo & oppoSide)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                    }
                 }
                 break;
             case BISHOP_FROM://象移动
@@ -490,7 +511,17 @@ struct boardStruct
                     endPosition += ccAdvisorDelta[i];
                     int32 chessPieceTo = currentBoard[endPosition];
                     if (!(chessPieceTo & selfSide))
-                        movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                    {
+                        if (!capture)
+                        {
+                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                        else
+                        {
+                            if (chessPieceTo & oppoSide)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                    }
                 }
                 break;
             case KNIGHT_FROM://马移动
@@ -507,7 +538,17 @@ struct boardStruct
                             continue;
                         int32 chessPieceTo = currentBoard[endPosition];
                         if (!(chessPieceTo & selfSide))
-                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        {
+                            if (!capture)
+                            {
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                            }
+                            else
+                            {
+                                if (chessPieceTo & oppoSide)
+                                    movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                            }
+                        }
                     }
                 }
                 break;
@@ -521,7 +562,10 @@ struct boardStruct
                         int32 chessPieceTo = currentBoard[endPosition];
                         if (chessPieceTo & selfSide)break;
                         if (chessPieceTo == 0)
-                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        {
+                            if(!capture)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
                         else if (chessPieceTo & oppoSide)
                         {
                             movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
@@ -542,7 +586,10 @@ struct boardStruct
                     {
                         int32 chessPieceTo = currentBoard[endPosition];
                         if (chessPieceTo == 0)
-                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        {
+                            if(!capture)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
                         else
                             break;
                         endPosition += nDelta;
@@ -566,7 +613,7 @@ struct boardStruct
                 if (IN_BOARD(endPosition))
                 {
                     int32 chessPieceTo = currentBoard[endPosition];
-                    if ((chessPieceTo & selfSide) == 0)
+                    if ((chessPieceTo & selfSide) == 0&&!capture)
                         movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
                 }
                 if (AWAY_HALF(beginPosition, playerSide))
@@ -577,8 +624,18 @@ struct boardStruct
                         if (IN_BOARD(endPosition))
                         {
                             int32 chessPieceTo = currentBoard[endPosition];
-                            if ((chessPieceTo & selfSide) == 0)
-                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                            if (!(chessPieceTo & selfSide))
+                            {
+                                if (!capture)
+                                {
+                                    movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                                }
+                                else
+                                {
+                                    if (chessPieceTo & oppoSide)
+                                        movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                                }
+                            }
                         }
                     }
                 }
