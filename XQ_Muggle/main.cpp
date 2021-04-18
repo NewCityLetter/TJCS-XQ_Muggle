@@ -11,10 +11,11 @@ ZobristTable Zobrist;
 int DEPTH = 4;                          //当前搜索深度
 bool isNormalEnd = 1;					//标志当前是否正常弹出
 long long beginSearchTime = 0;          //开始搜索的时间
+boardStruct board;
+int additionalDepth;//若最深层结点是置换表中搜索得到的，此变量记录该局面的已搜深度+DEPTH，否则为DEPTH
 
 int main()
 {
-	boardStruct board;
 	board.ClearBoard();
 	bool isQuit = false;
 	UcciComPositStruct UcciComPosit;
@@ -93,17 +94,7 @@ int main()
 		}
 		else if (com == comGoTime)
 		{
-			int Move = 0;
-			DEPTH = 4;
-			isNormalEnd = 1;
-			beginSearchTime = GetTime();
-			while (isNormalEnd)
-			{
-				int tmpMove = AlphaBeta(board, MIN_VAL, MAX_VAL).BestMove;
-				if (isNormalEnd)
-					Move = tmpMove;
-				DEPTH++;
-			}//迭代加深
+			int Move = MainSearch(board);
 			cout << "这个着法：" << Move << endl;
 			PrintMoves(Move, getMoves);
 			std::cout << "bestmove " << getMoves << std::endl;

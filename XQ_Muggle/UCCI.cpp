@@ -48,7 +48,7 @@ static bool AnalyPositCom(char* strP, UcciComPositStruct& UcciComPosit)
 	{
 		strP += (movesPosit - 1) + strlen(" ");  // strP指针现在指向" moves"后的第一个字符，由于之前strP加了“ fen ”长度，所以抵消
 		//printf("movesPosit=%d  sreing=%s\n", movesPosit,strP);
-		UcciComPosit.movesNum = strlen(strP) / 5; printf("strP=%s len=%d num=%d\n", strP, strlen(strP), UcciComPosit.movesNum);
+		UcciComPosit.movesNum = strlen(strP) / 5; //printf("strP=%s len=%d num=%d\n", strP, strlen(strP), UcciComPosit.movesNum);
 		strP++;
 		for (int i = 0; i < UcciComPosit.movesNum; i++)
 		{

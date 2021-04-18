@@ -1,4 +1,3 @@
-
 #ifndef HASH_H
 #define HASH_H
 #include "board.h"
@@ -13,16 +12,23 @@ const int HASH_PV = 3;         // PV节点的置换表项
 
 struct HashItem
 {
-    uint8_t depth,flag;	                // 搜索深度,标志位
+    uint8_t depth, flag;	                // 搜索深度,标志位
     int16_t svl;                        // 分值
     uint16_t wmv;	                    // 最佳着法
     uint32_t dwLock0, dwLock1;	        // 两个校验码，防止存取冲突
 };
 HashItem hashTable[HASH_SIZE];          // 置换表
 
-//提取置换表项
-int LookUpHash(boardStruct& board, int Alpha, int Beta, int nDepth, int& mv)
+void ClearHash()
 {
+    HashItem initial;
+    initial.depth = 0;
+    memset(hashTable, 0, HASH_SIZE * sizeof(HashItem));
+}
+//提取置换表项
+int LookUpHash(boardStruct& board, int Alpha, int Beta, int nDepth, int& mv, int& hashDepth)
+{
+    hashDepth = 0;
     bool isMate = false;    //杀棋标志，若是杀棋则不需要满足深度条件
     HashItem hsh = hashTable[board.zobr.dwKey & (HASH_SIZE - 1)]; //在置换表中查询是否命中
     if (hsh.dwLock0 != board.zobr.dwLock0 || hsh.dwLock1 != board.zobr.dwLock1)
@@ -45,7 +51,8 @@ int LookUpHash(boardStruct& board, int Alpha, int Beta, int nDepth, int& mv)
         hsh.svl += board.nowDepth;
         isMate = true;
     }
-    if (hsh.depth >= nDepth || isMate) {                   //能否利用置换表的两个因素：深度是否达到条件/边界判定
+    if (hsh.depth >= DEPTH - nDepth || isMate) {                   //能否利用置换表的两个因素：深度是否达到条件/边界判定
+        hashDepth = hsh.depth;
         if (hsh.flag == HASH_BETA)
             return (hsh.svl >= Beta ? hsh.svl : -MATE_VALUE);
         else if (hsh.flag == HASH_ALPHA)
