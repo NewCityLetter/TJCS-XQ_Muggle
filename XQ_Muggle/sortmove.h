@@ -6,6 +6,11 @@
 #define SORTMOVE_H
 
 
+const int MVVLVA = 1;
+const int HISTORY = 2;
+
+extern int historyTable[65536];
+
 static int cucMvvLva[24] = 
 {
   0, 0, 0, 0, 0, 0, 0, 0,
@@ -27,10 +32,15 @@ static bool CompareMvvLva(const int a, const int b)
 	return MvvLva(a) > MvvLva(b);
 }
 
-inline int SortMove(boardStruct board, int* Moves,bool capture=0)
+static bool CompareHistory(const int a, const int b)
+{
+	return historyTable[a] > historyTable[b];
+}
+
+inline int SortMove(boardStruct board, int* Moves,int kind,bool capture=0)
 {
 	int numOfMoves = board.GenerateMove(Moves,capture);
-	std::sort(Moves, Moves + numOfMoves, CompareMvvLva);
+	std::sort(Moves, Moves + numOfMoves, kind==MVVLVA?CompareMvvLva:CompareHistory);
 	return numOfMoves;
 }	
 

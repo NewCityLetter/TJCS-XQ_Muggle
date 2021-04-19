@@ -13,6 +13,7 @@ bool isNormalEnd = 1;					//标志当前是否正常弹出
 long long beginSearchTime = 0;          //开始搜索的时间
 boardStruct board;
 int additionalDepth;//若最深层结点是置换表中搜索得到的，此变量记录该局面的已搜深度+DEPTH，否则为DEPTH
+int historyTable[65536];
 
 int main()
 {

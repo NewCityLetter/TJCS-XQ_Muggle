@@ -133,7 +133,7 @@ int QuiescSearch(boardStruct& Board, int Alpha, int Beta)
     int Moves[MAX_MOVES];
     int numOfMoves=0;
     if(Board.InCheck())//若当前在将军，则返回所有着法
-        numOfMoves = SortMove(board, Moves);
+        numOfMoves = SortMove(board, Moves,HISTORY);
     else
     {
         Val = Board.Evaluate();
@@ -141,7 +141,7 @@ int QuiescSearch(boardStruct& Board, int Alpha, int Beta)
             return Val;
         bestVal = Val;
         Alpha = MAX(Alpha, Val);
-        numOfMoves = SortMove(board, Moves,true);//否则返回所有吃子着法，即局面大分变化着法
+        numOfMoves = SortMove(board, Moves,MVVLVA,true);//否则返回所有吃子着法，即局面大分变化着法
     }
     
     /*if (numOfMoves == 0)
@@ -194,81 +194,23 @@ int QuiescSearch(boardStruct& Board, int Alpha, int Beta)
     return bestVal==MIN_VAL?Board.nowDepth+MIN_VAL:bestVal;
 }
 
-
-/*
-BestMove PVS(boardStruct& Board,int Alpha, int Beta)
-主要变例搜索，调用方法同AlphaBeta
-*/
-/*BestMove PVS(boardStruct& Board,int Alpha, int Beta)
-{
-
-    if (Board.nowDepth == DEPTH)
-    {
-        return {QuiescSearch(Board, Alpha, Beta), 0};
-    }
-    if (Board.nowDepth == LIMIT_DEPTH)
-    {
-        return {Board.Evaluate(), 0};
-    }
-    int val = 0, bestVal = MIN_VAL, bestMove = 0;
-    int Moves[MAX_MOVES];
-    int numOfMoves = SortMove(Board, Moves);
-
-    for (int i = 0; i < numOfMoves; i++)//遍历着法
-    {
-        Board.MakeInCheckMove(Moves[i]);
-        if (Board.InCheck())
-        {
-            Board.UndoMakeInCheckMove();
-            continue;
-        }
-        Board.UndoMakeInCheckMove();
-
-
-        Board.MakeMove(Moves[i]);
-        if (bestVal == MIN_VAL)
-        {
-            val = -PVS(Board,-Beta, -Alpha).Val;
-        }
-        else
-        {
-            val = -PVS(Board,-Alpha - 1, -Alpha).Val;
-            if (val > Alpha && val < Beta)
-            {
-                val= -PVS(Board, -Beta, -Alpha).Val;
-            }
-        }
-        Board.UndoMakeMove();
-
-       
-        if (val > bestVal)
-        {
-            bestVal = val;
-            bestMove = Moves[i];
-            if (val >= Beta)
-            {
-                return { val, Moves[i] };
-            }
-            
-            if (val > Alpha)
-            {
-                Alpha = val;
-            }
-        }
-        if (GetTime() - beginSearchTime >= MAX_TIME)
-        {
-            isNormalEnd = 0;
-            return { bestVal,bestMove };
-        }
-    }
-    return { bestVal,bestMove };
-}*/
-
 /*空着裁剪*/
 const bool NO_NULL = true; // "SearchCut()"的参数，是否禁止空着裁剪
 const int NULL_MARGIN = 500;   // 空步裁剪的子力边界 
 
 #define R 2
+
+extern int historyTable[65536];
+
+inline void ClearHistory()
+{
+    memset(historyTable, 0, sizeof(historyTable));
+}
+
+inline void UpdateHistory(int move, int depth)
+{
+    historyTable[move] += depth * depth;
+}
 
 bool NullOkay(boardStruct& Board)
 {                 // 判断是否允许空步裁剪
@@ -326,7 +268,7 @@ BestMove PVS(boardStruct& Board, int Alpha, int Beta, bool bNoNull)
     }/**/
 
     int Moves[MAX_MOVES];
-    int numOfMoves = SortMove(Board, Moves);
+    int numOfMoves = SortMove(Board, Moves,HISTORY);
 
     struct tempHashNode
     {
@@ -394,10 +336,10 @@ BestMove PVS(boardStruct& Board, int Alpha, int Beta, bool bNoNull)
             return { bestVal,bestMove };
         }
     }
-    if (isNormalEnd) {
+    if (isNormalEnd&&bestMove) {
         StoreHash(Board, hashf, bestMove, bestVal, additionalDepth - Board.nowDepth);//添加置换项
-
-        if (Board.nowDepth == 0)
+        UpdateHistory(bestMove, DEPTH-board.nowDepth);
+        /*if (Board.nowDepth == 0)
         {
             printf("now_MAX_DEPTH=%d Alpha=%d Beta=%d\n", DEPTH,Alpha,Beta);
 
@@ -405,7 +347,7 @@ BestMove PVS(boardStruct& Board, int Alpha, int Beta, bool bNoNull)
             PRINT(bestMove);
 
             printf("\n");
-        }/**/
+        }*/
         
     }
     return { bestVal,bestMove };
@@ -424,6 +366,7 @@ int MainSearch(boardStruct& Board)
     beginSearchTime= GetTime();
     isNormalEnd = 1;
     DEPTH = 2;
+    ClearHistory();
     while (isNormalEnd&&DEPTH<=MAX_DEPTH)
     {
         BestMove tmpMove = PVS(Board, MIN_VAL, MAX_VAL);
