@@ -364,9 +364,9 @@ struct MoveStruct
 {
     uint16 wmv;//前八位endpos，后八位beginpos
     uint16 ucpcCaptured, ucbCheck;//capture为被吃子编号
-    uint32 dwKey;//zobrist
+    uint64 dwKey;//zobrist
 
-    void Set(int mv, int pcCaptured/*, bool bCheck*/, uint32 dwKey_)
+    void Set(int mv, int pcCaptured/*, bool bCheck*/, uint64 dwKey_)
     {
         wmv = mv;
         ucpcCaptured = pcCaptured;
@@ -436,6 +436,10 @@ struct boardStruct
         {
             if (currentPosition[chessPiece])
                 AddPiece(currentPosition[chessPiece], chessPiece);
+        }
+        if (playerSide == 0)
+        {
+            zobr.Xor(Zobrist.Player, Player);
         }
     }
     /*
@@ -648,18 +652,13 @@ struct boardStruct
     void ChangeSide()
     {
         playerSide = 1 - playerSide;
-        zobr.Xor(Zobrist.Player);
+        zobr.Xor(Zobrist.Player, Player);
     }
     //局面评价函数
     int Evaluate(void) const
     {
         return (playerSide == 0 ? redVal - blackVal : blackVal - redVal) + ADVANCED_VALUE;
     }
-    /*//和棋分值
-    int DrawValue(void) const
-    {
-        return (nowDepth & 1) == 0 ? -DRAW_VALUE : DRAW_VALUE;
-    }*/
     /*
     void DelPiece(int32 pos,int32 chessPiece)
     移除一个棋子 pos为移除棋子位置，chhessPiece为移除棋子编号
@@ -673,12 +672,12 @@ struct boardStruct
         if (chessPiece < 32)
         {
             redVal -= cucvlPiecePos[pieceType][pos];
-            zobr.Xor(Zobrist.Table[pieceType][pos]);
+            zobr.Xor(Zobrist.Table[pieceType][pos], Table[pieceType][pos]);
         }
         else
         {
             blackVal -= cucvlPiecePos[pieceType][SQUARE_FLIP(pos)];//取值颠倒
-            zobr.Xor(Zobrist.Table[pieceType + 7][pos]);
+            zobr.Xor(Zobrist.Table[pieceType + 7][pos], Table[pieceType + 7][pos]);
         }
     }
 
@@ -695,12 +694,12 @@ struct boardStruct
         if (chessPiece < 32)
         {
             redVal += cucvlPiecePos[pieceType][pos];
-            zobr.Xor(Zobrist.Table[pieceType][pos]);
+            zobr.Xor(Zobrist.Table[pieceType][pos], Table[pieceType][pos]);
         }
         else
         {
             blackVal += cucvlPiecePos[pieceType][SQUARE_FLIP(pos)];//取值颠倒
-            zobr.Xor(Zobrist.Table[pieceType + 7][pos]);
+            zobr.Xor(Zobrist.Table[pieceType + 7][pos], Table[pieceType + 7][pos]);
         }
     }
     /*
@@ -749,7 +748,7 @@ struct boardStruct
     */
     void MakeMove(int32 Move)
     {
-        uint32 dwKey = zobr.dwKey;//记录局面
+        uint64_t dwKey = zobr.dwKey;//记录局面
         ChangeSide();
         int Capture = 0;
         int32 beginPos, endPos, chessPiece;

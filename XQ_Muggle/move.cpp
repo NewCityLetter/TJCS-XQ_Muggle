@@ -1,6 +1,7 @@
 #include "move.h"
 #include "ucci.h"
 #include "hash.h"
+#include "buffer.h"
 /*// 调整型局面评价函数
 inline int Evaluate(const boardStruct& Board) {
     int vl;
@@ -194,6 +195,7 @@ int QuiescSearch(boardStruct& Board, int Alpha, int Beta)
     return bestVal==MIN_VAL?Board.nowDepth+MIN_VAL:bestVal;
 }
 
+
 /*空着裁剪*/
 const bool NO_NULL = true; // "SearchCut()"的参数，是否禁止空着裁剪
 const int NULL_MARGIN = 500;   // 空步裁剪的子力边界 
@@ -355,18 +357,26 @@ BestMove PVS(boardStruct& Board, int Alpha, int Beta, bool bNoNull)
 
 
 
-
 /*
 int MainSearch(boardStruct& board)
 将所有零散变量整合在MainSearch中，调用MainSearch，传入棋盘，返回着法
 */
 int MainSearch(boardStruct& Board)
 {
-    BestMove Move = {MIN_VAL,0};
     beginSearchTime= GetTime();
+
+    printf("key=%llu\n", board.zobr.dwKey);
+    int index = lower_bound(OpenBook, OpenBook + 596737, Book{ board.zobr.dwKey,0 }) - OpenBook;
+    for (; index <= 596737 && OpenBook[index].HashKey == board.zobr.dwKey; index++)
+    {
+        PRINT(OpenBook[index].Move);
+        return OpenBook[index].Move;
+    }
+
+    /**/BestMove Move = {MIN_VAL,0};
+
     isNormalEnd = 1;
     DEPTH = 2;
-    ClearHistory();
     while (isNormalEnd&&DEPTH<=MAX_DEPTH)
     {
         BestMove tmpMove = PVS(Board, MIN_VAL, MAX_VAL);
@@ -377,5 +387,3 @@ int MainSearch(boardStruct& Board)
     }
     return Move.BestMove;
 }
-
-

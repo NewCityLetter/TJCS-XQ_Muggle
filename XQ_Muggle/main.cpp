@@ -3,6 +3,7 @@
 #include "move.h"
 #include "ucci.h"
 #include "board.h"
+#include "buffer.h"
 #include "zobrist.h"
 
 using namespace std;
@@ -58,10 +59,10 @@ int main()
 				printf("i=%d pos=%s\n",i, getMoves);
 			}*/
 			board.InitValue();
-
+			cout << board.zobr.dwKey << endl;
 
 			printf("nowPlayer=%d red=%d balck=%d nowVal=%d\n", board.playerSide, board.redVal, board.blackVal, board.Evaluate());
-
+			//cout << "Key£º" << board.zobr.dwKey << endl;
 			/*if (board.InCheck())
 			{
 				printf("IN CHECK!\n");

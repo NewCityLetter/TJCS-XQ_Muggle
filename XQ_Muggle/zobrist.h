@@ -53,31 +53,26 @@ struct RC4Struct
         return Ret.dw;
     }
 };
-//尚未理解 三个值计算方式相同意义何在
+//
 struct ZobristStruct
 {
-    uint32_t dwKey, dwLock0, dwLock1;
+    uint64_t dwKey;
+    uint32_t dwLock0, dwLock1;
     void InitZero(void)
     {
         dwKey = dwLock0 = dwLock1 = 0;
     }
     void InitRC4(RC4Struct& rc4)
     {
-        dwKey = rc4.NextLong();
+        //dwKey = rc4.NextLong();
         dwLock0 = rc4.NextLong();
         dwLock1 = rc4.NextLong();
     }
-    void Xor(const ZobristStruct& zobr)
+    void Xor(const ZobristStruct& zobr, const unsigned __int64 info)
     {
-        dwKey ^= zobr.dwKey;
+        dwKey ^= info;
         dwLock0 ^= zobr.dwLock0;
         dwLock1 ^= zobr.dwLock1;
-    }
-    void Xor(const ZobristStruct& zobr1, const ZobristStruct& zobr2)
-    {
-        dwKey ^= zobr1.dwKey ^ zobr2.dwKey;
-        dwLock0 ^= zobr1.dwLock0 ^ zobr2.dwLock0;
-        dwLock1 ^= zobr1.dwLock1 ^ zobr2.dwLock1;
     }
 }; // zobr
 
