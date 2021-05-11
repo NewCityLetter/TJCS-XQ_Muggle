@@ -1,16 +1,11 @@
-/*修改和增加的内容：
-1.修改了GETTYPE函数，使其对棋子类型的判断的返回值从简单的0/1变成了可以返回棋子具体类型，实现方法：增加pieceTypes数组；
-2.由1衍生出的“判断棋子是红方还是黑方”的方式从看GETTYPE返回值是0/1变成了“chessPiece是否<32”；
-3.增加了boardStruct.Evaluate作为局面评价函数，依据是红黑双方的总子力值之差，定义常变量ADVANCED_VALUE=3；
-4.增加了boardStruct.Drawvalue作为和棋分值，定义常变量DRAW_VALUE=20；
-5.在move.cpp中增加“调整型局面评价函数”，并在AlphaBeta函数中补齐了return的空缺部分。
-*/
+
 #ifndef BOARD_H
 #define BOARD_H
 #pragma once
 
 #include "base.h"
 #include "zobrist.h"
+#include "premove.h"
 
 //FROM为起始编号 TO为结束编号
 const int32 KING_FROM = 0;
@@ -355,8 +350,14 @@ inline uint8 GetOrder(int line, int col)
     return (line << 4) + col;
 }
 //翻转格子
-inline int SQUARE_FLIP(int pos) {
+inline int SQUARE_FLIP(int pos) 
+{
     return 254 - pos;
+}
+
+inline bool SAME_HALF(int beginPos, int endPos) 
+{
+  return ((beginPos ^ endPos) & 0x80) == 0;
 }
 
 // 历史走法信息
@@ -445,13 +446,13 @@ struct boardStruct
         }
     }
     /*
-      int32 GenerateMove(int32* movesArray,bool capture=0)
+    int32 GenerateMove(int32* movesArray,bool capture=0)
     生成移动方案
     将移动方案传入moveArray数组，其中终点放在左八位，起点放在右八位
     返回总的着法数量
     capture默认为0，表示生成所有方式，1为生成吃子
-    */
-    int32 GenerateMove(int32* movesArray,bool capture=0)
+    
+    int32 GenerateMove(int32* movesArray,bool capture=0)//更慢，但能更多层？
     {
         int32 numOfMoves = 0;
         int32 selfSide = SELF_SIDE(playerSide);//将棋子与之异或以判断归属
@@ -649,7 +650,368 @@ struct boardStruct
             }
         }
         return numOfMoves;//返回着法数量
+    }*/
+    /*
+    使用预生成着法生成着法，采用遍历整个数组
+    层数较深时候稍微快一点
+    
+    int32 GenerateMove(int32* movesArray,bool capture=0)
+    {
+        int32 numOfMoves = 0;
+        int32 selfSide = SELF_SIDE(playerSide);//将棋子与之异或以判断归属
+        int32 oppoSide = OPPO_SIDE(playerSide);
+        for (int32 beginPosition = 0; beginPosition < 256; beginPosition++)
+        {
+            if(!IN_BOARD(beginPosition))continue;
+            int32 chessPieceFrom = currentBoard[beginPosition];
+            if (!(chessPieceFrom & selfSide))continue;
+            //if (PIECE_INDEX(chessPieceFrom))printf("%d ", PIECE_INDEX(chessPieceFrom));
+            switch (PIECE_INDEX(chessPieceFrom))
+            {
+            case KING_FROM://将移动
+                for (int32 i = 1; i <= preMove.kingPreMove[0][beginPosition]; i++)
+                {
+                    int32 endPosition = preMove.kingPreMove[i][beginPosition];
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (!(chessPieceTo & selfSide))
+                    {
+                        if (!capture)
+                        {
+                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                        else
+                        {
+                            if(chessPieceTo&oppoSide)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                    }
+
+                }//printf("visit king\n");
+                break;
+            case ADVISOR_FROM://士移动
+            case ADVISOR_TO:
+                for (int32 i = 1; i <= preMove.advisorPreMove[0][beginPosition]; i++)
+                {
+                    int32 endPosition = preMove.advisorPreMove[i][beginPosition];
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (!(chessPieceTo & selfSide))
+                    {
+                        if (!capture)
+                        {
+                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                        else
+                        {
+                            if (chessPieceTo & oppoSide)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                    }
+                }
+                break;
+            case BISHOP_FROM://象移动
+            case BISHOP_TO:
+                for (int32 i = 1; i <= preMove.bishopPreMove[0][beginPosition]; i++)
+                {
+                    int32 endPosition = preMove.bishopPreMove[i][beginPosition];
+                    if(currentBoard[preMove.bishopEye[i][beginPosition]])
+                        continue;
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (!(chessPieceTo & selfSide))
+                    {
+                        if (!capture)
+                        {
+                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                        else
+                        {
+                            if (chessPieceTo & oppoSide)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                    }
+                }
+                break;
+            case KNIGHT_FROM://马移动
+            case KNIGHT_TO:
+                for (int32 i = 1; i <= preMove.knightPreMove[0][beginPosition]; i++)
+                {
+                    int32 endPosition = preMove.knightPreMove[i][beginPosition];
+                    if (currentBoard[preMove.knightLeg[i][beginPosition]])
+                        continue;//蹩脚
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (!(chessPieceTo & selfSide))
+                    {
+                        if (!capture)
+                        {
+                             movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                        else
+                        {
+                            if (chessPieceTo & oppoSide)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                    }
+                }
+                break;
+            case ROOK_FROM://车移动
+            case ROOK_TO:
+                for (int32 i = 0; i < 4; i++)
+                {
+                    int32 endPosition = beginPosition + ccKingDelta[i];
+                    while (IN_BOARD(endPosition))
+                    {
+                        int32 chessPieceTo = currentBoard[endPosition];
+                        if (chessPieceTo & selfSide)break;
+                        if (chessPieceTo == 0)
+                        {
+                            if(!capture)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                        else if (chessPieceTo & oppoSide)
+                        {
+                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                            break;
+                        }
+
+                        endPosition += ccKingDelta[i];
+                    }
+                }
+                break;
+            case CANNON_FROM://炮移动
+            case CANNON_TO:
+                for (int32 i = 0; i < 4; i++)
+                {
+                    int32 nDelta = ccKingDelta[i];
+                    int32 endPosition = beginPosition + nDelta;
+                    while (IN_BOARD(endPosition))
+                    {
+                        int32 chessPieceTo = currentBoard[endPosition];
+                        if (chessPieceTo == 0)
+                        {
+                            if(!capture)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                        else
+                            break;
+                        endPosition += nDelta;
+                    }//炮可以直接到达的地方
+                    endPosition += nDelta;
+                    while (IN_BOARD(endPosition))
+                    {
+                        int32 chessPieceTo = currentBoard[endPosition];
+                        if (chessPieceTo != 0)
+                        {
+                            if ((chessPieceTo & oppoSide) != 0)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                            break;
+                        }
+                        endPosition += nDelta;
+                    }//炮可以打的地方
+                }
+                break;
+            default://兵移动
+                for (int32 i = 1; i <= preMove.pawnPreMove[playerSide][0][beginPosition]; i++)
+                {
+                    int32 endPosition = preMove.pawnPreMove[playerSide][i][beginPosition];
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (!(chessPieceTo & selfSide))
+                    {
+                        if (!capture)
+                        {
+                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                        else
+                        {
+                            if(chessPieceTo&oppoSide)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                    }
+                }
+                break;
+            }
+        }
+        return numOfMoves;//返回着法数量
+    }*/
+
+    /*
+    另外一种预生成模型
+    目前最快
+    通过遍历所有棋子
+    */
+    int32 GenerateMove(int32* movesArray,bool capture=0)
+    {
+        int32 numOfMoves = 0;
+        int32 selfSide = SELF_SIDE(playerSide);//将棋子与之异或以判断归属
+        int32 oppoSide = OPPO_SIDE(playerSide);
+        for (int32 chessPieceFrom = selfSide; chessPieceFrom < selfSide+16; chessPieceFrom++)
+        {
+            if(!currentPosition[chessPieceFrom])continue;
+            int32 beginPosition = currentPosition[chessPieceFrom];
+            switch (PIECE_INDEX(chessPieceFrom))
+            {
+            case KING_FROM://将移动
+                for (int32 i = 1; i <= preMove.kingPreMove[0][beginPosition]; i++)
+                {
+                    int32 endPosition = preMove.kingPreMove[i][beginPosition];
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (!(chessPieceTo & selfSide))
+                    {
+                        if (!capture)
+                        {
+                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                        else
+                        {
+                            if(chessPieceTo&oppoSide)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                    }
+
+                }//printf("visit king\n");
+                break;
+            case ADVISOR_FROM://士移动
+            case ADVISOR_TO:
+                for (int32 i = 1; i <= preMove.advisorPreMove[0][beginPosition]; i++)
+                {
+                    int32 endPosition = preMove.advisorPreMove[i][beginPosition];
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (!(chessPieceTo & selfSide))
+                    {
+                        if (!capture)
+                        {
+                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                        else
+                        {
+                            if (chessPieceTo & oppoSide)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                    }
+                }
+                break;
+            case BISHOP_FROM://象移动
+            case BISHOP_TO:
+                for (int32 i = 1; i <= preMove.bishopPreMove[0][beginPosition]; i++)
+                {
+                    int32 endPosition = preMove.bishopPreMove[i][beginPosition];
+                    if(currentBoard[preMove.bishopEye[i][beginPosition]])
+                        continue;
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (!(chessPieceTo & selfSide))
+                    {
+                        if (!capture)
+                        {
+                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                        else
+                        {
+                            if (chessPieceTo & oppoSide)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                    }
+                }
+                break;
+            case KNIGHT_FROM://马移动
+            case KNIGHT_TO:
+                for (int32 i = 1; i <= preMove.knightPreMove[0][beginPosition]; i++)
+                {
+                    int32 endPosition = preMove.knightPreMove[i][beginPosition];
+                    if (currentBoard[preMove.knightLeg[i][beginPosition]])
+                        continue;//蹩脚
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (!(chessPieceTo & selfSide))
+                    {
+                        if (!capture)
+                        {
+                             movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                        else
+                        {
+                            if (chessPieceTo & oppoSide)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                    }
+                }
+                break;
+            case ROOK_FROM://车移动
+            case ROOK_TO:
+                for (int32 i = 0; i < 4; i++)
+                {
+                    int32 endPosition = beginPosition + ccKingDelta[i];
+                    while (IN_BOARD(endPosition))
+                    {
+                        int32 chessPieceTo = currentBoard[endPosition];
+                        if (chessPieceTo & selfSide)break;
+                        if (chessPieceTo == 0)
+                        {
+                            if(!capture)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                        else if (chessPieceTo & oppoSide)
+                        {
+                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                            break;
+                        }
+
+                        endPosition += ccKingDelta[i];
+                    }
+                }
+                break;
+            case CANNON_FROM://炮移动
+            case CANNON_TO:
+                for (int32 i = 0; i < 4; i++)
+                {
+                    int32 nDelta = ccKingDelta[i];
+                    int32 endPosition = beginPosition + nDelta;
+                    while (IN_BOARD(endPosition))
+                    {
+                        int32 chessPieceTo = currentBoard[endPosition];
+                        if (chessPieceTo == 0)
+                        {
+                            if(!capture)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                        else
+                            break;
+                        endPosition += nDelta;
+                    }//炮可以直接到达的地方
+                    endPosition += nDelta;
+                    while (IN_BOARD(endPosition))
+                    {
+                        int32 chessPieceTo = currentBoard[endPosition];
+                        if (chessPieceTo != 0)
+                        {
+                            if ((chessPieceTo & oppoSide) != 0)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                            break;
+                        }
+                        endPosition += nDelta;
+                    }//炮可以打的地方
+                }
+                break;
+            default://兵移动
+                for (int32 i = 1; i <= preMove.pawnPreMove[playerSide][0][beginPosition]; i++)
+                {
+                    int32 endPosition = preMove.pawnPreMove[playerSide][i][beginPosition];
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (!(chessPieceTo & selfSide))
+                    {
+                        if (!capture)
+                        {
+                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                        else
+                        {
+                            if(chessPieceTo&oppoSide)
+                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        }
+                    }
+                }
+                break;
+            }
+        }
+        return numOfMoves;//返回着法数量
     }
+
     //交换走子
     void ChangeSide()
     {

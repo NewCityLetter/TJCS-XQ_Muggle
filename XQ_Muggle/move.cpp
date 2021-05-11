@@ -356,9 +356,9 @@ int MainSearch(boardStruct& Board)
             if(chooseFrom==1&&OpenBook[index2].Score<=OpenBook[index1].Score)
                 return OpenBook[index1].Move;
             PRINT(OpenBook[index2].Move);
-            int16 Move = OpenBook[index2].Move;
-            int8 Begin = Move & 255;
-            int8 End = Move >> 8;
+            uint16 Move = OpenBook[index2].Move;
+            uint8 Begin = Move & 255;
+            uint8 End = Move >> 8;
             printf("begin=%d end=%d\n", Begin, End);
             Begin = Begin  - ((Begin & 15)<<1)+ 14;
             End = End  - ((End & 15) << 1)+ 14;
@@ -382,7 +382,7 @@ int MainSearch(boardStruct& Board)
         BestMove tmpMove = PVS(Board, MIN_VAL, MAX_VAL);
         if (isNormalEnd&&tmpMove.BestMove)
             Move = tmpMove;
-        printf("finish depth=%d\n", DEPTH);
+        printf("depth=%d time=%lld\n", DEPTH,GetTime()-beginSearchTime);
         DEPTH++;
         //µü´ú¼ÓÉî
     }
