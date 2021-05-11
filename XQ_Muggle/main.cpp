@@ -8,13 +8,15 @@
 
 using namespace std;
 
+boardStruct board;
 ZobristTable Zobrist;
 int DEPTH = 4;                          //当前搜索深度
 bool isNormalEnd = 1;					//标志当前是否正常弹出
+bool openBookFlag = 1;					//标记是否从开局库中查询
 long long beginSearchTime = 0;          //开始搜索的时间
-boardStruct board;
-int additionalDepth;//若最深层结点是置换表中搜索得到的，此变量记录该局面的已搜深度+DEPTH，否则为DEPTH
+int additionalDepth;					//若最深层结点是置换表中搜索得到的，此变量记录该局面的已搜深度+DEPTH，否则为DEPTH
 int historyTable[65536];
+uint64_t openBookKey;							//对称局面Key
 
 int main()
 {
@@ -53,21 +55,11 @@ int main()
 			Moves(UcciComPosit, board.currentBoard);
 			board.GetCurrentPosition();
 			board.playerSide = UcciComPosit.player;
-			/*for (int i = 16; i < 48; i++)
-			{
-				PrintMoves(board.currentPosition[i], getMoves);
-				printf("i=%d pos=%s\n",i, getMoves);
-			}*/
 			board.InitValue();
 			cout << board.zobr.dwKey << endl;
+			cout << openBookKey << endl;
 
 			printf("nowPlayer=%d red=%d balck=%d nowVal=%d\n", board.playerSide, board.redVal, board.blackVal, board.Evaluate());
-			//cout << "Key：" << board.zobr.dwKey << endl;
-			/*if (board.InCheck())
-			{
-				printf("IN CHECK!\n");
-			}
-			else printf("NOT IN CHECK!\n");*/
 			for (int i = 2; i <= 0xc; printf("\n"), i++)
 				for (int j = 2; j <= 0xb; j++)
 				{
@@ -92,8 +84,33 @@ int main()
 
 				}
 
+			for (int i = 2; i <= 0xc; printf("\n"), i++)
+				for (int j = 2; j <= 0xb; j++)
+				{
+					if (i == 2 && j == 2)
+					{
+						printf("  ");
+						continue;
+					}
+					if (i == 2)
+					{
+						printf(" %c ", 'A' + j - 3);
+						continue;
+					}
+					if (j == 2)
+					{
+						printf("%d ", 9 - i + 3);
+						continue;
+					}/**/
+					int pos = (i << 4) + j;
+					if (board.currentBoard[pos + 14 - ((pos & 15) << 1)] == 0)
+						printf("0");
+					printf("%d ", board.currentBoard[pos + 14 - ((pos & 15) << 1)]);
 
-		}
+				}
+
+
+		}//position startpos moves c3c4 g6g5 b2e2 position startpos moves g3g4 c6c5 h2e2
 		else if (com == comGoTime)
 		{
 			int Move = MainSearch(board);

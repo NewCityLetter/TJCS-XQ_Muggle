@@ -102,32 +102,8 @@ BestMove QuiescSearchh(boardStruct& Board, int Alpha, int Beta)
 */
 int QuiescSearch(boardStruct& Board, int Alpha, int Beta)
 {
-    if (Board.nowDepth == LIMIT_DEPTH+DEPTH)//若达到最大搜索深度返回估值
+    if (Board.nowDepth == LIMIT_DEPTH)//若达到最大搜索深度返回估值
     {
-        /*for (int i = 2; i <= 0xc; printf("\n"), i++)
-            for (int j = 2; j <= 0xb; j++)
-            {
-                if (i == 2 && j == 2)
-                {
-                    printf("  ");
-                    continue;
-                }
-                if (i == 2)
-                {
-                    printf(" %c ", 'A' + j - 3);
-                    continue;
-                }
-                if (j == 2)
-                {
-                    printf("%d ", 9 - i + 3);
-                    continue;
-                }
-                if (Board.currentBoard[(i << 4) + j] == 0)
-                    printf("0");
-                printf("%d ", Board.currentBoard[(i << 4) + j]);
-
-            }
-        printf("nowval=%d\n", Board.Evaluate());*/
         return Board.Evaluate();
     }
     int Val = 0, bestVal = MIN_VAL;
@@ -145,11 +121,6 @@ int QuiescSearch(boardStruct& Board, int Alpha, int Beta)
         numOfMoves = SortMove(board, Moves,MVVLVA,true);//否则返回所有吃子着法，即局面大分变化着法
     }
     
-    /*if (numOfMoves == 0)
-    {
-        if (Board.InCheck())
-            return MIN_VAL;
-    }*/
     for (int i = 0; i < numOfMoves; i++)//遍历着法
     {
         Board.MakeInCheckMove(Moves[i]);
@@ -221,8 +192,8 @@ bool NullOkay(boardStruct& Board)
 /*
 BestMove PVS(boardStruct& Board,int Alpha, int Beta)
 主要变例搜索，调用方法同AlphaBeta
+带置换表裁剪、空着裁剪、历史启发
 */
-
 BestMove PVS(boardStruct& Board, int Alpha, int Beta, bool bNoNull)
 {
 
@@ -264,7 +235,8 @@ BestMove PVS(boardStruct& Board, int Alpha, int Beta, bool bNoNull)
         Board.nowDepth -= R;
         Board.UndoNullMove();
 
-        if (val >= Beta) {
+        if (val >= Beta) 
+        {
             return { val,0 };
         }
     }/**/
@@ -338,7 +310,8 @@ BestMove PVS(boardStruct& Board, int Alpha, int Beta, bool bNoNull)
             return { bestVal,bestMove };
         }
     }
-    if (isNormalEnd&&bestMove) {
+    if (isNormalEnd&&bestMove) 
+    {
         StoreHash(Board, hashf, bestMove, bestVal, additionalDepth - Board.nowDepth);//添加置换项
         UpdateHistory(bestMove, DEPTH-board.nowDepth);
         /*if (Board.nowDepth == 0)
@@ -365,15 +338,42 @@ int MainSearch(boardStruct& Board)
 {
     beginSearchTime= GetTime();
 
-    printf("key=%llu\n", board.zobr.dwKey);
-    int index = lower_bound(OpenBook, OpenBook + 596737, Book{ board.zobr.dwKey,0 }) - OpenBook;
-    for (; index <= 596737 && OpenBook[index].HashKey == board.zobr.dwKey; index++)
+    printf("key=%llu 对称key=%llu\n", board.zobr.dwKey,openBookKey);
+    if (openBookFlag)
     {
-        PRINT(OpenBook[index].Move);
-        return OpenBook[index].Move;
-    }
+        int chooseFrom = 0;
+        int index1 = lower_bound(OpenBook, OpenBook + 596737, Book{ board.zobr.dwKey,0 }) - OpenBook;
+        if( index1<=596737&&OpenBook[index1].HashKey == board.zobr.dwKey)
+        {
+            PRINT(OpenBook[index1].Move);
+            chooseFrom = 1;
+            //return OpenBook[index1].Move;
+        }
+        //对称局面，所以要反转
+        int index2 = lower_bound(OpenBook, OpenBook + 596737, Book{ openBookKey,0 }) - OpenBook;
+        if( index2 <= 596737 && OpenBook[index2].HashKey == openBookKey)
+        {
+            if(chooseFrom==1&&OpenBook[index2].Score<=OpenBook[index1].Score)
+                return OpenBook[index1].Move;
+            PRINT(OpenBook[index2].Move);
+            int16 Move = OpenBook[index2].Move;
+            int8 Begin = Move & 255;
+            int8 End = Move >> 8;
+            printf("begin=%d end=%d\n", Begin, End);
+            Begin = Begin  - ((Begin & 15)<<1)+ 14;
+            End = End  - ((End & 15) << 1)+ 14;
+            Move = (End << 8) + Begin;
 
-    /**/BestMove Move = {MIN_VAL,0};
+            PRINT(Move);
+            return Move;
+        }
+        if(chooseFrom==1)
+            return OpenBook[index1].Move;
+        openBookFlag = 0;
+    }
+    
+
+    BestMove Move = {MIN_VAL,0};
 
     isNormalEnd = 1;
     DEPTH = 2;
@@ -382,8 +382,9 @@ int MainSearch(boardStruct& Board)
         BestMove tmpMove = PVS(Board, MIN_VAL, MAX_VAL);
         if (isNormalEnd&&tmpMove.BestMove)
             Move = tmpMove;
+        printf("finish depth=%d\n", DEPTH);
         DEPTH++;
         //迭代加深
     }
-    return Move.BestMove;
+    return Move.BestMove;/**/
 }

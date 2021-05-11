@@ -128,7 +128,10 @@ ucciComEnum IdleCom(UcciComPositStruct& UcciComPosit, UcciComGoTimeStruct& UcciC
 	{
 		return comQuit;
 	}
-	else {
+	else if (MyStrcasencmp(strP, "setoption newgame", 17) == 0)
+		openBookFlag = 1;
+	else 
+	{
 		return comUnkown;
 	}
 

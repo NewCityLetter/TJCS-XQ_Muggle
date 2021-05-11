@@ -22,12 +22,13 @@ const int MAX_MOVES = 512;				// 最大的历史走法数
 const int MIN_VAL = -0x7ffffff;         // 最小值
 const int MAX_VAL = 0x7ffffff;          // 最大值
 const int MAX_DEPTH = 32;
-const int LIMIT_DEPTH =4;
+const int LIMIT_DEPTH =32;
 
 extern int DEPTH;                          //当前搜索深度
 extern bool isNormalEnd;				   //标志当前是否正常弹出
 extern long long beginSearchTime;          //开始搜索的时间
-
+extern bool openBookFlag;
+extern uint64_t openBookKey;
 
 /*
 获取当前时间，单位为毫秒

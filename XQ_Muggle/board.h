@@ -395,6 +395,7 @@ struct boardStruct
 
     void ClearBoard()//棋盘初始化
     {
+        openBookKey = 0;
         playerSide = 0;
         nowDepth = 0;
         nowMoveNum = 0;
@@ -440,6 +441,7 @@ struct boardStruct
         if (playerSide == 0)
         {
             zobr.Xor(Zobrist.Player, Player);
+            openBookKey ^= Player;
         }
     }
     /*
@@ -653,6 +655,7 @@ struct boardStruct
     {
         playerSide = 1 - playerSide;
         zobr.Xor(Zobrist.Player, Player);
+        openBookKey ^= Player;
     }
     //局面评价函数
     int Evaluate(void) const
@@ -695,11 +698,15 @@ struct boardStruct
         {
             redVal += cucvlPiecePos[pieceType][pos];
             zobr.Xor(Zobrist.Table[pieceType][pos], Table[pieceType][pos]);
+            if (openBookFlag)
+                openBookKey ^= Table[pieceType][pos-((pos&15)<<1)+14];
         }
         else
         {
             blackVal += cucvlPiecePos[pieceType][SQUARE_FLIP(pos)];//取值颠倒
             zobr.Xor(Zobrist.Table[pieceType + 7][pos], Table[pieceType + 7][pos]);
+            if (openBookFlag)
+                openBookKey ^= Table[pieceType+7][pos  - ((pos & 15)<<1)+ 14];
         }
     }
     /*
