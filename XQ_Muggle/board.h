@@ -1073,6 +1073,7 @@ struct boardStruct
     }
     /*
     进行一次将军局面下的假设移动，不换边，仅记录下棋着法和吃子，判断后即恢复
+    目前已失效
     */
     void MakeInCheckMove(int Move)
     {
@@ -1094,6 +1095,7 @@ struct boardStruct
 
     /*
     撤销一次将军局面下的假设移动，不换边，仅撤销下棋着法和吃子
+    已失效
     */
     void UndoMakeInCheckMove()
     {

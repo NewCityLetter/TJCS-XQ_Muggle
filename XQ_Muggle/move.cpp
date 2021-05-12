@@ -123,20 +123,26 @@ int QuiescSearch(boardStruct& Board, int Alpha, int Beta)
     
     for (int i = 0; i < numOfMoves; i++)//遍历着法
     {
-        Board.MakeInCheckMove(Moves[i]);
+        /*Board.MakeInCheckMove(Moves[i]);
         if (Board.InCheck())
         {
             Board.UndoMakeInCheckMove();
             continue;
         }
-        Board.UndoMakeInCheckMove();
+        Board.UndoMakeInCheckMove();*/
+
+
         Board.MakeMove(Moves[i]);
+        Board.ChangeSide();
+        if (Board.InCheck())
+        {
+            Board.UndoMakeMove();
+            Board.ChangeSide();
+            continue;
+        }
+        Board.ChangeSide();
         Val = -QuiescSearch(Board, -Beta, -Alpha);
         Board.UndoMakeMove();
-        /*if (Board.nowDepth == LIMIT_DEPTH -4)
-        {
-            printf("num=%d nowval=%d bestval=%d Alpha=%d Beta=%d nowdepth=%d\n",numOfMoves, Val,bestVal,Alpha,Beta,Board.nowDepth);
-        }*/
 
         if (Val > bestVal)
         {
@@ -169,7 +175,7 @@ int QuiescSearch(boardStruct& Board, int Alpha, int Beta)
 
 /*空着裁剪*/
 const bool NO_NULL = true; // "SearchCut()"的参数，是否禁止空着裁剪
-const int NULL_MARGIN = 500;   // 空步裁剪的子力边界 
+const int NULL_MARGIN = 500;   // 空步裁剪的子力边界，过于粗糙
 
 #define R 2
 
@@ -256,16 +262,25 @@ BestMove PVS(boardStruct& Board, int Alpha, int Beta, bool bNoNull)
     tmpHash.Depth = 0;
     for (int i = 0; i < numOfMoves; i++)//遍历着法
     {
-        Board.MakeInCheckMove(Moves[i]);
+        /*Board.MakeInCheckMove(Moves[i]);
         if (Board.InCheck())
         {
             Board.UndoMakeInCheckMove();
             continue;
         }
-        Board.UndoMakeInCheckMove();
+        Board.UndoMakeInCheckMove();*/
 
 
         Board.MakeMove(Moves[i]);
+        Board.ChangeSide();
+        if (Board.InCheck())
+        {
+            Board.UndoMakeMove();
+            Board.ChangeSide();
+            continue;
+        }
+        Board.ChangeSide();
+        
         if (bestVal == MIN_VAL)
         {
             val = -PVS(Board, -Beta, -Alpha).Val;
