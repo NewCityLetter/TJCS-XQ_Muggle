@@ -9,7 +9,7 @@ inline int Evaluate(const boardStruct& Board) {
     return vl == Board.DrawValue() ? vl - 1 : vl;
 }*/
 extern int additionalDepth;
-const long long MAX_TIME = 3000;               //最长搜索时间
+const long long MAX_TIME = 1000;               //最长搜索时间
 
 void PRINT(int Move)
 {

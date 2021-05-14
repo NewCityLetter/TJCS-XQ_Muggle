@@ -942,42 +942,50 @@ struct boardStruct
             case ROOK_FROM://车移动
             case ROOK_TO:
             {
-                int line=beginPosition>>4;
-                int col=beginPosition&15;
-                int bitState=bitLine[line];
-                for (int32 i = 1; i <=preMove.rookLinePreMove[0][col][bitState]; i++)//行
+                if(capture)
                 {
-                    int32 endPosition =beginPosition+preMove.rookLinePreMove[i][col][bitState];
-                    int32 chessPieceTo = currentBoard[endPosition];
-                    if (chessPieceTo & selfSide)continue;
-                    if (chessPieceTo == 0)
+                    int line=beginPosition>>4;
+                    int col=beginPosition&15;
+                    int bitState=bitLine[line];
+                    for (int32 i = 0; i <=1; i++)//行
                     {
-                        if(!capture)
+                        int32 endPosition =beginPosition+preMove.rookLinePreMove[col][bitState][i]-col;
+                        int32 chessPieceTo = currentBoard[endPosition];
+                        if (chessPieceTo & oppoSide)
                             movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
                     }
-                    else if (chessPieceTo & oppoSide)
+
+                    bitState=bitCol[col];
+                    for (int32 i = 0; i <=1; i++)//列
                     {
-                        movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
-                        break;
+                        int32 endPosition =beginPosition+((preMove.rookColPreMove[line][bitState][i]-line)<<4);
+                        int32 chessPieceTo = currentBoard[endPosition];
+                        if (chessPieceTo & oppoSide)
+                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
                     }
                 }
-
-                
-                bitState=bitCol[col];
-                for (int32 i = 1; i <=preMove.rookColPreMove[0][line][bitState]; i++)//列
+                else
                 {
-                    int32 endPosition =beginPosition+preMove.rookColPreMove[i][line][bitState];
-                    int32 chessPieceTo = currentBoard[endPosition];
-                    if (chessPieceTo & selfSide)continue;
-                    if (chessPieceTo == 0)
+                    int line=beginPosition>>4;
+                    int col=beginPosition&15;
+                    int bitState=bitLine[line];
+                    for (int32 i = preMove.rookLinePreMove[col][bitState][0]; i <=preMove.rookLinePreMove[col][bitState][1]; i++)//行
                     {
-                        if(!capture)
-                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
-                    }
-                    else if (chessPieceTo & oppoSide)
-                    {
+                        int32 endPosition =beginPosition+i-col;
+                        int32 chessPieceTo = currentBoard[endPosition];
+                        if (chessPieceTo & selfSide)
+                            continue;
                         movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
-                        break;
+                    }
+
+                    bitState=bitCol[col];
+                    for (int32 i = preMove.rookColPreMove[line][bitState][0]; i <=preMove.rookColPreMove[line][bitState][1]; i++)//列
+                    {
+                        int32 endPosition =beginPosition+((i-line)<<4);
+                        int32 chessPieceTo = currentBoard[endPosition];
+                        if (chessPieceTo & selfSide)
+                            continue;
+                        movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
                     }
                 }
                 break;
@@ -989,39 +997,42 @@ struct boardStruct
                 int line=beginPosition>>4;
                 int col=beginPosition&15;
                 int bitState=bitLine[line];
-                for (int32 i = 1; i <=preMove.cannonLinePreMove[0][col][bitState]; i++)//行
+                for (int32 i = 0; i <=1; i++)//行
                 {
-                    int32 endPosition =beginPosition+preMove.cannonLinePreMove[i][col][bitState];
+                    int32 endPosition =beginPosition+preMove.cannonLinePreCap[col][bitState][i]-col;
                     int32 chessPieceTo = currentBoard[endPosition];
-                    if (chessPieceTo & selfSide)continue;
-                    if (chessPieceTo == 0)
-                    {
-                        if(!capture)
-                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
-                    }
-                    else if (chessPieceTo & oppoSide)
-                    {
+                    if (chessPieceTo & oppoSide)
                         movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
-                        break;
-                    }
                 }
 
-                
                 bitState=bitCol[col];
-                for (int32 i = 1; i <=preMove.cannonColPreMove[0][line][bitState]; i++)//列
+                for (int32 i = 0; i <=1; i++)//列
                 {
-                    int32 endPosition =beginPosition+preMove.cannonColPreMove[i][line][bitState];
+                    int32 endPosition =beginPosition+((preMove.cannonColPreCap[line][bitState][i]-line)<<4);
                     int32 chessPieceTo = currentBoard[endPosition];
-                    if (chessPieceTo & selfSide)continue;
-                    if (chessPieceTo == 0)
-                    {
-                        if(!capture)
-                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
-                    }
-                    else if (chessPieceTo & oppoSide)
-                    {
+                    if (chessPieceTo & oppoSide)
                         movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
-                        break;
+                }
+                if(!capture)
+                {
+                    bitState=bitLine[line];
+                    for (int32 i = preMove.rookLinePreMove[col][bitState][0]+1; i <preMove.rookLinePreMove[col][bitState][1]; i++)//行
+                    {
+                        int32 endPosition =beginPosition+i-col;
+                        int32 chessPieceTo = currentBoard[endPosition];
+                        if (chessPieceTo & selfSide)
+                            continue;
+                        movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                    }
+
+                    bitState=bitCol[col];
+                    for (int32 i = preMove.rookColPreMove[line][bitState][0]+1; i <preMove.rookColPreMove[line][bitState][1]; i++)//列
+                    {
+                        int32 endPosition =beginPosition+((i-line)<<4);
+                        int32 chessPieceTo = currentBoard[endPosition];
+                        if (chessPieceTo & selfSide)
+                            continue;
+                        movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
                     }
                 }
                 break;
@@ -1074,8 +1085,8 @@ struct boardStruct
         int32 pieceType = GETTYPE(chessPiece);//棋子具体类型，数值范围0-6
 
         //bitBoard修改
-        bitLine[(pos>>4)]-=(1<<(pos&15));
-        bitCol[(pos&15)]-=(1<<(pos>>4));
+        bitLine[(pos>>4)]^=bitMaskLine[pos];
+        bitCol[(pos&15)]^=bitMaskCol[pos];
 
         // 红方减分，黑方加分
         if (chessPiece < 32)
@@ -1101,8 +1112,8 @@ struct boardStruct
         int32 pieceType = GETTYPE(chessPiece);//棋子具体类型，数值范围0-6
 
         //bitBoard修改
-        bitLine[(pos>>4)]+=(1<<(pos&15));
-        bitCol[(pos&15)]+=(1<<(pos>>4));
+        bitLine[(pos>>4)]^=bitMaskLine[pos];
+        bitCol[(pos&15)]^=bitMaskCol[pos];
         /*printf("pos=%d line=%d col=%d line=",pos,(pos>>4)-0x3,(pos&15)-0x3);
         tmp=bitLine[(pos>>4)-0x3];
         //for(int i=0;i<9;i++)
@@ -1224,7 +1235,7 @@ struct boardStruct
     /*
     bool InCheck()
     判断被将军与否，返回true为将军
-    */
+    
     bool InCheck()
     {
         int kingNum = SELF_SIDE(playerSide);//根据palyerSide获取将编号
@@ -1290,20 +1301,101 @@ struct boardStruct
             }
         }
         return false;
+    }*/
+    bool InCheck()//由预置着法判断将军
+    {
+        int kingNum = SELF_SIDE(playerSide);//根据palyerSide获取将编号
+        int kingPos = currentPosition[kingNum];
+        int32 selfSide = SELF_SIDE(playerSide);//将棋子与之异或以判断归属
+        int32 oppoSide = OPPO_SIDE(playerSide);
+        int beginPos;
+
+        //将见面
+        for(int i=0;i<=1;i++)
+        {
+            if(preMove.rookColPreMove[kingPos>>4][bitCol[kingPos&15]][i]==oppoSide+KING_FROM)
+                return 1;
+        }
+
+        //兵将军
+        for(int i=oppoSide+PAWN_FROM;i<=oppoSide+PAWN_TO;i++)
+        {
+            beginPos=currentPosition[i];
+            if(beginPos==0)
+                continue;
+            for(int j=1;j<=preMove.pawnPreMove[1-playerSide][0][beginPos];j++)
+                if(preMove.pawnPreMove[1-playerSide][j][beginPos]==kingPos)
+                    return 1;
+        }
+
+        //马将军
+        for (int i=oppoSide+KNIGHT_FROM;i<=oppoSide+KNIGHT_TO;i++)
+        {
+            beginPos=currentPosition[i];
+            if(beginPos==0)
+                continue;
+            for(int j=1;j<=preMove.knightPreMove[0][beginPos];j++)
+                if(preMove.knightPreMove[j][beginPos]==kingPos)
+                    return 1;
+        }
+
+        //车将军
+        for (int i=oppoSide+ROOK_FROM;i<=oppoSide+ROOK_TO;i++)
+        {
+            beginPos=currentPosition[i];
+            if(beginPos==0)
+                continue;
+            for(int j=0;j<=1;j++)//行
+            {
+                if((beginPos>>4)!=(kingPos>>4))
+                    continue;
+                if(preMove.rookLinePreMove[beginPos&15][bitLine[beginPos>>4]][j]==(kingPos&15))
+                    return 1;
+            }
+            for(int j=0;j<=1;j++)//列
+            {
+                if((beginPos&15)!=(kingPos&15))
+                    continue;
+                if(preMove.rookColPreMove[beginPos>>4][bitCol[beginPos&15]][j]==(kingPos>>4))
+                    return 1;
+            }
+        }
+
+        //炮将军
+        for (int i=oppoSide+CANNON_FROM;i<=oppoSide+CANNON_TO;i++)
+        {
+            beginPos=currentPosition[i];
+            if(beginPos==0)
+                continue;
+            for(int j=0;j<=1;j++)//行
+            {
+                if((beginPos>>4)!=(kingPos>>4))
+                    continue;
+                if(preMove.cannonLinePreCap[beginPos&15][bitLine[beginPos>>4]][j]==(kingPos&15))
+                    return 1;
+            }
+            for(int j=0;j<=1;j++)//列
+            {
+                if((beginPos&15)!=(kingPos&15))
+                    continue;
+                if(preMove.cannonColPreCap[beginPos>>4][bitCol[beginPos&15]][j]==(kingPos>>4))
+                    return 1;
+            }
+        }
+        
+        return false;
     }
 
 
-    void NullMove() {                       // 走一步空步
-        //uint32_t dwKey;
-        //dwKey = zobr.dwKey;
+
+    void NullMove() // 走一步空步
+    {           
         ChangeSide();
-        //mvsList[nowMoveNum].Set(0, 0, dwKey);
-        //nowMoveNum++;
         nowDepth++;
     }
 
-    void UndoNullMove() {                   // 撤消走一步空步
-        //nowMoveNum--;
+    void UndoNullMove() // 撤消走一步空步
+    {                   
         nowDepth--;
         ChangeSide();
     }

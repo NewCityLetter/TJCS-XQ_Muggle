@@ -98,47 +98,44 @@ void GetPreMove()
         {
             if(!(j&(1<<i)))
                 continue;
-            int countRook=0,countCannon=0,k;
+            int k;
+            preMove.rookLinePreMove[i][j][0]=3;
+            preMove.rookLinePreMove[i][j][1]=11;
+            preMove.cannonLinePreCap[i][j][0]=0;
+            preMove.cannonLinePreCap[i][j][1]=0;
             for(k=i+1;k<12;k++)//向右寻找
             {
                 if(j&(1<<k))
                 {
-                    preMove.rookLinePreMove[++countRook][i][j]=k-i;//车吃子
+                    preMove.rookLinePreMove[i][j][1]=k;//车吃子
                     break;
                 }
-                preMove.rookLinePreMove[++countRook][i][j]=k-i;//车不吃子
-                preMove.cannonLinePreMove[++countCannon][i][j]=k-i;//炮不吃子
             }
             for(k=k+1;k<12;k++)
             {
                 if(j&(1<<k))
                 {
-                    preMove.cannonLinePreMove[++countCannon][i][j]=k-i;//炮吃子
+                    preMove.cannonLinePreCap[i][j][1]=k;//炮吃子
                     break;
                 }
             }
 
-            for(k=i-1;k>=3;k--)//向左寻找
+           for(k=i-1;k>=3;k--)//向左寻找
             {
                 if(j&(1<<k))
                 {
-                    preMove.rookLinePreMove[++countRook][i][j]=k-i;//车吃子
+                    preMove.rookLinePreMove[i][j][0]=k;//车吃子
                     break;
                 }
-                preMove.rookLinePreMove[++countRook][i][j]=k-i;//车不吃子
-                preMove.cannonLinePreMove[++countCannon][i][j]=k-i;//炮不吃子
             }
             for(k=k-1;k>=3;k--)
             {
                 if(j&(1<<k))
                 {
-                    preMove.cannonLinePreMove[++countCannon][i][j]=k-i;//炮吃子
+                    preMove.cannonLinePreCap[i][j][0]=k;//炮吃子
                     break;
                 }
             }
-
-            preMove.rookLinePreMove[0][i][j]=countRook;
-            preMove.cannonLinePreMove[0][i][j]=countCannon;
 
         }
     }
@@ -150,47 +147,44 @@ void GetPreMove()
         {
             if(!(j&(1<<i)))
                 continue;
-            int countRook=0,countCannon=0,k;
+            int k;
+            preMove.rookColPreMove[i][j][0]=3;
+            preMove.rookColPreMove[i][j][1]=12;
+            preMove.cannonColPreCap[i][j][0]=0;
+            preMove.cannonColPreCap[i][j][1]=0;
             for(k=i+1;k<13;k++)//向下寻找
             {
                 if(j&(1<<k))
                 {
-                    preMove.rookColPreMove[++countRook][i][j]=(k-i)<<4;//车吃子
+                    preMove.rookColPreMove[i][j][1]=k;//车吃子
                     break;
                 }
-                preMove.rookColPreMove[++countRook][i][j]=(k-i)<<4;//车不吃子
-                preMove.cannonColPreMove[++countCannon][i][j]=(k-i)<<4;//炮不吃子
             }
             for(k=k+1;k<13;k++)
             {
                 if(j&(1<<k))
                 {
-                    preMove.cannonColPreMove[++countCannon][i][j]=(k-i)<<4;//炮吃子
+                    preMove.cannonColPreCap[i][j][1]=k;//炮吃子
                     break;
                 }
             }
 
-            for(k=i-1;k>=3;k--)//向上寻找
+           for(k=i-1;k>=3;k--)//向上寻找
             {
                 if(j&(1<<k))
                 {
-                    preMove.rookColPreMove[++countRook][i][j]=(k-i)<<4;//车吃子
+                    preMove.rookColPreMove[i][j][0]=k;//车吃子
                     break;
                 }
-                preMove.rookColPreMove[++countRook][i][j]=(k-i)<<4;//车不吃子
-                preMove.cannonColPreMove[++countCannon][i][j]=(k-i)<<4;//炮不吃子
             }
             for(k=k-1;k>=3;k--)
             {
                 if(j&(1<<k))
                 {
-                    preMove.cannonColPreMove[++countCannon][i][j]=(k-i)<<4;//炮吃子
+                    preMove.cannonColPreCap[i][j][0]=k;//炮吃子
                     break;
                 }
             }
-
-            preMove.rookColPreMove[0][i][j]=countRook;
-            preMove.cannonColPreMove[0][i][j]=countCannon;
 
         }
     }
