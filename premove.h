@@ -1,8 +1,9 @@
-#include "base.h"
-#include "board.h"
-
 #ifndef PREMOVE_H
 #define PREMOVE_H
+#pragma once
+
+#include "base.h"
+#include "board.h"
 
 struct PreMove
 {

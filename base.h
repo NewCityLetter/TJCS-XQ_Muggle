@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <sys/timeb.h>
 
-//数据类型预定义
 typedef char            int8;
 typedef unsigned char   uint8;
 typedef short           int16;
@@ -18,27 +17,81 @@ typedef unsigned int    uint32;
 typedef long long       int64;
 typedef unsigned long long       uint64;
 
-const int MAX_MOVES = 512;				// 最大的历史走法数
-const int MIN_VAL = -0x7ffffff;         // 最小值
-const int MAX_VAL = 0x7ffffff;          // 最大值
+const int MAX_MOVES = 512;				
+const int MIN_VAL = -0x7ffffff;         
+const int MAX_VAL = 0x7ffffff;         
 const int MAX_DEPTH = 32;
 const int LIMIT_DEPTH =32;
 
-extern int DEPTH;                          //当前搜索深度
-extern bool isNormalEnd;				   //标志当前是否正常弹出
-extern long long beginSearchTime;          //开始搜索的时间
+extern int DEPTH;                          
+extern bool isNormalEnd;				   
+extern long long beginSearchTime;          
 extern bool openBookFlag;
 extern uint64_t openBookKey;
+extern int historyTable[65536];
 
-/*
-获取当前时间，单位为毫秒
-*/
+inline int MAX(int a,int b)
+{
+	return a>b?a:b;
+}
 inline long long GetTime()
 {
 	timeb tb;
 	ftime(&tb);
 	return (long long)tb.time * 1000 + tb.millitm;
 }
+inline void ClearHistory()
+{
+	memset(historyTable, 0, sizeof(historyTable));
+}
+
+inline int MyStrcasencmp(const char s1[], const char s2[], const int len)
+{
+	int i;
+	for (i = 0; i < len && (s2[i] != '\0' || s1[i] != '\0'); i++)
+	{
+		if (s1[i] != s2[i])
+		{
+			if (((s1[i] >= 'a' && s1[i] <= 'z') || (s1[i] >= 'A' && s1[i] <= 'Z')) &&
+				((s2[i] >= 'a' && s2[i] <= 'z') || (s2[i] >= 'A' && s2[i] <= 'Z')) &&
+				((s1[i] - s2[i] == 'A' - 'a') || (s1[i] - s2[i] == 'a' - 'A')))
+				continue;
+
+			else
+				return s1[i] - s2[i];
+		}
+	}
+	return 0;
+}
+
+
+inline int MyStrstr(const char* str, const char* substr)
+{
+	int i, j, k, n;
+
+	for (i = 0; str[i] != '\0'; i++) {
+		if (str[i] == substr[0]) {
+			n = i;
+			for (j = 0, k = 0; substr[j] != '\0'; j++, n++) {
+				if (str[n] != substr[j])
+					k++;
+			}
+			if (k == 0) {
+				return i + 1;
+			}
+		}
+	}
+	return 0; //return????????????
+}
+
+
+inline int CoordXY(int line, int col)
+{
+	return col + (line << 4);
+
+}
+
+
 const unsigned __int64 Player = 0xA0CE2AF90C452F58;
 const unsigned __int64 Table[14][256] =
 {
