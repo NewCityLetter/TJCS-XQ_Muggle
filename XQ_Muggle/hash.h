@@ -1,94 +1,142 @@
 #ifndef HASH_H
 #define HASH_H
+#pragma once
+
+#include "base.h"
 #include "board.h"
-const int MATE_VALUE = 10000;           // 将死的分值
-const int WIN_VALUE = MATE_VALUE - 200; // 搜索出胜负的分值界限，超出此值就说明已经搜索出杀棋了
-const int BAN_VALUE = MATE_VALUE - 100;  // 长将判负的分值，用于判断结点是否要写入置换表
 
-const int HASH_SIZE = 1 << 20; // 置换表大小
-const int HASH_ALPHA = 1;      // ALPHA节点的置换表项
-const int HASH_BETA = 2;       // BETA节点的置换表项
-const int HASH_PV = 3;         // PV节点的置换表项
+extern boardStruct board;
 
-struct HashItem
+const int nHashMask = 1 << 20; // 置换表大小
+// 置换表标志
+const int HASH_BETA = 1;
+const int HASH_ALPHA = 2;
+const int HASH_PV = 3;
+
+//单置换表的置换表结构
+struct HashStruct
 {
-    uint8_t depth, flag;	                // 搜索深度,标志位
-    int16_t svl;                        // 分值
-    uint16_t wmv;	                    // 最佳着法
-    uint32_t dwLock0, dwLock1;	        // 两个校验码，防止存取冲突
-};
-HashItem hashTable[HASH_SIZE];          // 置换表
-
-void ClearHash()
-{
-    HashItem initial;
-    initial.depth = 0;
-    memset(hashTable, 0, HASH_SIZE * sizeof(HashItem));
+    uint32_t dwLock0;           // Zobrist校验锁，第一部分
+    uint16_t wmv;                      //最佳着法
+    uint8_t depth;                     //深度
+    uint8_t flag;                     //标志
+    int16_t svl;                      //分值
+    uint32_t dwLock1;           // Zobrist校验锁，第二部分
+}; 
+HashStruct hshItems[nHashMask];          // 置换表
+void ClearHash(void) // 清空置换表
+{         
+    memset(hshItems, 0, nHashMask * sizeof(HashStruct));
 }
-//提取置换表项
-int LookUpHash(boardStruct& board, int Alpha, int Beta, int nDepth, int& mv, int& hashDepth)
-{
-    hashDepth = 0;
-    bool isMate = false;    //杀棋标志，若是杀棋则不需要满足深度条件
-    HashItem hsh = hashTable[board.zobr.dwKey & (HASH_SIZE - 1)]; //在置换表中查询是否命中
-    if (hsh.dwLock0 != board.zobr.dwLock0 || hsh.dwLock1 != board.zobr.dwLock1)
-    {
-        mv = 0;
-        return -MATE_VALUE;//不命中
-    }
-    mv = hsh.wmv;
 
-    if (hsh.svl > WIN_VALUE)
+bool HASH_POS_EQUAL(const HashStruct& hsh) 
+{
+    return hsh.dwLock0 == board.zobr.dwLock0 && hsh.dwLock1 == board.zobr.dwLock1;
+}
+
+/* 判断获取置换表要符合哪些条件，置换表的分值针对四个不同的区间有不同的处理：
+ * 一、如果分值在"WIN_VALUE"以内(即介于"-WIN_VALUE"到"WIN_VALUE"之间，下同)，则只获取满足搜索深度要求的局面；
+ * 二、如果分值在"WIN_VALUE"和"BAN_VALUE"之间，则不能获取置换表中的值(只能获取最佳着法仅供参考)，目的是防止由于长将而导致的“置换表的不稳定性”；
+ * 三、如果分值在"BAN_VALUE"以外，则获取局面时不必考虑搜索深度要求，因为这些局面已经被证明是杀棋了；
+ * 四、如果分值是"DrawValue()"(是第一种情况的特殊情况)，则不能获取置换表中的值(原因与第二种情况相同)。
+ * 注意：对于第三种情况，要对杀棋步数进行调整！
+ */
+int ValueAdjust(bool& bBanNode, bool& bMateNode, int vl) 
+{
+    bBanNode = bMateNode = false;
+    if (vl > WIN_VALUE)
     {
-        if (nDepth > 0 && hsh.svl < BAN_VALUE)      //可能导致搜索的不稳定性，但最佳着法可能拿到
-            return -MATE_VALUE;                     //允许根节点写入置换表，因为需要靠其获得最佳着法
-        hsh.svl -= board.nowDepth;                  //胜利局面的特殊处理
-        isMate = true;
+        if (vl <= BAN_VALUE)
+            bBanNode = true;
+        else
+        {
+            bMateNode = true;
+            vl -= board.nowDepth;
+        }
     }
-    else if (hsh.svl < -WIN_VALUE) {
-        if (nDepth > 0 && hsh.svl > -BAN_VALUE)     //同上
-            return -MATE_VALUE;
-        hsh.svl += board.nowDepth;
-        isMate = true;
+    else if (vl < -WIN_VALUE) 
+    {
+        if (vl >= -BAN_VALUE) 
+        {
+            bBanNode = true;
+        }
+        else 
+        {
+            bMateNode = true;
+            vl += board.nowDepth;
+        }
     }
-    if (hsh.depth >= DEPTH - nDepth || isMate) {                   //能否利用置换表的两个因素：深度是否达到条件/边界判定
-        hashDepth = hsh.depth;
-        if (hsh.flag == HASH_BETA)
-            return (hsh.svl >= Beta ? hsh.svl : -MATE_VALUE);
-        else if (hsh.flag == HASH_ALPHA)
-            return (hsh.svl <= Alpha ? hsh.svl : -MATE_VALUE);
-        return hsh.svl;
+    else if (vl == board.DrawValue()) 
+    {
+        bBanNode = true;
     }
-    return -MATE_VALUE;
+    return vl;
+}
+
+//单置换
+//提取置换表项
+int LookUpHash(int Alpha, int Beta, int nDepth, int& mv)
+{
+    HashStruct hsh;
+    int vl;
+    bool bBanNode, bMateNode;
+    mv = 0;
+    hsh = hshItems[(board.zobr.dwKey) & (nHashMask - 1)];
+
+    if (HASH_POS_EQUAL(hsh))
+        mv = hsh.wmv;
+    else 
+        return -MATE_VALUE;
+    
+    board.moveHash[board.nowDepth] = hsh.wmv;
+    //返回经过处理的分值
+    vl = ValueAdjust(bBanNode, bMateNode, hsh.svl);
+
+    if (bBanNode||(hsh.depth < nDepth && !bMateNode))
+        return -MATE_VALUE;
+
+    //查看边界条件
+    if (hsh.flag == HASH_BETA) 
+        return (vl >= Beta) ? vl : -MATE_VALUE;
+    else if (hsh.flag == HASH_ALPHA)
+        return (vl <= Alpha) ? vl : -MATE_VALUE;
+    else
+        return vl;
 }
 
 //保存置换表项
-void StoreHash(boardStruct& board, int flag, int mv, int vl, int nDepth)
+void StoreHash(int flag, int mv, int vl, int nDepth)
 {
-    HashItem hsh = hashTable[board.zobr.dwKey & (HASH_SIZE - 1)];
-    if (hsh.depth > nDepth) {     //深度优先的替换策略
-        return;
-    }
+    HashStruct hsh = hshItems[(board.zobr.dwKey) & (nHashMask - 1)];
+    if (nDepth < hsh.depth) // 深度优先
+        return; 
+    //std::cout << "hashdepth:" << hsh.depth << " key:" << board.zobr.dwKey << '\n';
     hsh.flag = flag;
     hsh.depth = nDepth;
+    
+    //对分值做杀棋步数调整；
     if (vl > WIN_VALUE)
     {
         if (mv == 0 && vl <= BAN_VALUE)
-            return; // 可能导致搜索的不稳定性且没有最佳着法，退出
-        hsh.svl = vl + board.nowDepth;
+            return; //导致长将的局面(不进行置换裁剪)如果连最佳着法也没有，那么没有必要写入置换表
+        vl += board.nowDepth;
     }
     else if (vl < -WIN_VALUE)
     {
         if (mv == 0 && vl >= -BAN_VALUE)
-            return; // 同上
-        hsh.svl = vl - board.nowDepth;
+            return; // 同理
+        vl -= board.nowDepth;
     }
-    else {
-        hsh.svl = vl;
+    else if (vl == board.DrawValue() && mv == 0)
+    {
+        return;   // 同理
     }
-    hsh.wmv = mv;
+
+    // 记录置换表。
+    hsh.svl = vl;
     hsh.dwLock0 = board.zobr.dwLock0;
     hsh.dwLock1 = board.zobr.dwLock1;
-    hashTable[board.zobr.dwKey & (HASH_SIZE - 1)] = hsh;
-}
+    hsh.wmv = mv;
+    hshItems[(board.zobr.dwKey) & (nHashMask-1)] = hsh;/**/
+}/**/
 #endif

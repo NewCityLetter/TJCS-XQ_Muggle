@@ -1,7 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
 #include <cstring>
-#include<cstdint>
+#include <cstdint>
 #include "ucci.h"
 #include "log.h"
 
@@ -13,6 +13,7 @@ static char chFen[maxInputLen];//暂时储存
 static uint32_t movesList[maxMovesNum];
 
 extern char fetFenMoves[5];
+extern boardStruct board;
 
 /***************************************************************************
   函数名称：AnalyPositCom
@@ -92,16 +93,16 @@ ucciComEnum BootCom()
   返 回 值：返回读取到的指令的类型
   说    明：
 ***************************************************************************/
-ucciComEnum IdleCom(UcciComPositStruct& UcciComPosit, UcciComGoTimeStruct& UcciComGoTime)
+ucciComEnum IdleCom(UcciComPositStruct& UcciComPosit)
 {
 	char readStr[maxInputLen];
 	char* strP;
 	cin.getline(readStr, maxInputLen);
 
 	strP = readStr;
-	Log a;
+	/*Log a;
 	a.baseMsg();
-	a.error(strP);
+	a.error(strP);*/
 
 	if (MyStrcasencmp(strP, "isready", 7) == 0)
 	{
@@ -204,11 +205,10 @@ void Board(UcciComPositStruct& UcciComPosit, uint8* currentBoard)
 	pcRed[5] = addNum + CANNON_FROM;//炮
 	pcRed[6] = addNum + PAWN_FROM;//兵
 
-	for (i = 0; i < 7; i++) {
+	for (i = 0; i < 7; i++) 
+	{
 		pcBlack[i] = pcRed[i] + 16;
 	}
-
-
 
 	for (j = 3; *strP != ' '; strP++, j++)
 	{
@@ -252,8 +252,8 @@ void Board(UcciComPositStruct& UcciComPosit, uint8* currentBoard)
 
 	}
 
-	UcciComPosit.player = (UcciComPosit.movesNum + ((*(strP + 1) == 'b') ? 1 : 0)) % 2;
-
+	//UcciComPosit.player = (UcciComPosit.movesNum + ((*(strP + 1) == 'b') ? 1 : 0)) % 2;
+	UcciComPosit.player = ((*(strP + 1) == 'b') ? 1 : 0);
 }
 
 /***************************************************************************
@@ -276,15 +276,11 @@ void Moves(const UcciComPositStruct& UcciComPosit, uint8* currentBoard)
 		lineBeforeMove = 9 - (*(p + 1) - '0') + 3;
 		colAfterMove = *(p + 2) - 'a' + 3;
 		lineAfterMove = 9 - (*(p + 3) - '0') + 3;
-		//printf("UcciComPosit.movesNum=%d move %d %d %d %d\n", UcciComPosit.movesNum, lineBeforeMove, colBeforeMove, lineAfterMove, colAfterMove);
-		/*if (currentBoard[CoordXY(lineBeforeMove, colBeforeMove)] != 0
-			&& currentBoard[CoordXY(lineAfterMove, colAfterMove)]==0)
-		{*/
-		currentBoard[CoordXY(lineAfterMove, colAfterMove)] = currentBoard[CoordXY(lineBeforeMove, colBeforeMove)];
-		currentBoard[CoordXY(lineBeforeMove, colBeforeMove)] = 0;
-		//}
-
+		
+		int beginPos = CoordXY(lineBeforeMove, colBeforeMove),endPos=CoordXY(lineAfterMove, colAfterMove);
+		board.MakeMove(RecordMove(beginPos, endPos));
 	}
+	board.nowDepth = 0;
 }
 
 

@@ -1,6 +1,7 @@
 #pragma once
 #ifndef ZOBRIST_H
 #define ZOBRIST_H
+
 #include "base.h"
 /*
 zobrist hash

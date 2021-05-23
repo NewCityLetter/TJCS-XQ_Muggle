@@ -1,4 +1,4 @@
-#include "log.h"
+ï»¿#include "log.h"
 #include "base.h"
 #include "move.h"
 #include "ucci.h"
@@ -6,41 +6,90 @@
 #include "buffer.h"
 #include "zobrist.h"
 #include "premove.h"
+#include <stdlib.h> 
+#include <windows.h>
 
 using namespace std;
 
 boardStruct board;
 ZobristTable Zobrist;
 PreMove preMove;
-int DEPTH = 4;                          //µ±Ç°ËÑË÷Éî¶È
-bool isNormalEnd = 1;					//±êÖ¾µ±Ç°ÊÇ·ñÕı³£µ¯³ö
-bool openBookFlag = 1;					//±ê¼ÇÊÇ·ñ´Ó¿ª¾Ö¿âÖĞ²éÑ¯
-long long beginSearchTime = 0;          //¿ªÊ¼ËÑË÷µÄÊ±¼ä
-int additionalDepth;					//Èô×îÉî²ã½áµãÊÇÖÃ»»±íÖĞËÑË÷µÃµ½µÄ£¬´Ë±äÁ¿¼ÇÂ¼¸Ã¾ÖÃæµÄÒÑËÑÉî¶È+DEPTH£¬·ñÔòÎªDEPTH
-int historyTable[65536];
-uint64_t openBookKey;					//¶Ô³Æ¾ÖÃæKey
+bool isNormalEnd = 1;					//æ ‡å¿—å½“å‰æ˜¯å¦æ­£å¸¸å¼¹å‡º
+bool openBookFlag = 1;					//æ ‡è®°æ˜¯å¦ä»å¼€å±€åº“ä¸­æŸ¥è¯¢
+long long beginSearchTime = 0;          //å¼€å§‹æœç´¢çš„æ—¶é—´
+uint16 wmvKiller[LIMIT_DEPTH][2];		//æ€æ‰‹ç€æ³•è¡¨
+uint64_t openBookKey;					//å¯¹ç§°å±€é¢Key
+
+extern void ClearHash();
+extern void PreEvaluate();
+
+void printboard()
+{
+	HANDLE handle;//åˆ›å»ºå¥æŸ„ 
+	handle = GetStdHandle(STD_OUTPUT_HANDLE);//å–æ ‡å‡†è¾“å…¥è¾“å‡ºå¥æŸ„ 
+	printf("nowPlayer=%d red=%d balck=%d nowVal=%d\n", board.playerSide, board.redVal, board.blackVal, board.Evaluate());
+	printf("nowDepth=%d movenum=%d incheck=%d\n", board.nowDepth, board.nowMoveNum,board.InCheck());
+	for (int i = 0; i < board.nowMoveNum; i++)
+	{
+		PRINT(board.mvsList[i].wmv);
+		printf("->");
+	}
+	printf("\n");
+	for (int i = 2; i <= 0xc; printf("\n"), i++)
+		for (int j = 2; j <= 0xb; SetConsoleTextAttribute(handle, 15), j++)
+		{
+			if (i == 2 && j == 2)
+			{
+				printf("   ");
+				continue;
+			}
+			if (i == 2)
+			{
+				printf("  %c ", 'A' + j - 3);
+				continue;
+			}
+			if (j == 2)
+			{
+				printf(" %d ", 9 - i + 3);
+				continue;
+			}
+			if (board.currentBoard[(i << 4) + j] == 0)
+			{
+				printf("[  ]");
+				continue;
+			}
+			if (board.currentBoard[(i << 4) + j] < 32)
+				SetConsoleTextAttribute(handle, FOREGROUND_RED);
+			if (PIECE_INDEX(board.currentBoard[(i << 4) + j]) == KING_FROM)
+				printf(" å°† ");
+			else if (PIECE_INDEX(board.currentBoard[(i << 4) + j]) <= ADVISOR_TO)
+				printf(" å£« ");
+			else if (PIECE_INDEX(board.currentBoard[(i << 4) + j]) <= BISHOP_TO)
+				printf(" è±¡ ");
+			else if (PIECE_INDEX(board.currentBoard[(i << 4) + j]) <= KNIGHT_TO)
+				printf(" é©¬ ");
+			else if (PIECE_INDEX(board.currentBoard[(i << 4) + j]) <= ROOK_TO)
+				printf(" è½¦ ");
+			else if (PIECE_INDEX(board.currentBoard[(i << 4) + j]) <= CANNON_TO)
+				printf(" ç‚® ");
+			else if (PIECE_INDEX(board.currentBoard[(i << 4) + j]) <= PAWN_TO)
+				printf(" å…µ ");
+
+		}SetConsoleTextAttribute(handle, 15);
+}
 
 int main()
-{
-	board.ClearBoard();
+{	
 	bool isQuit = false;
 	UcciComPositStruct UcciComPosit;
-	UcciComGoTimeStruct UcciComGoTime;
 	char getMoves[5];
 	InitZobrist();
 	if (BootCom() != comUcci)
-	{
 		return 0;
-	}
 	else
 	{
 		GetPreMove();
-
-		/*for (int i = 0; i < 256; i++)
-			for (int j = 1; j <= preMove.kingPreMove[0][i] ; j++)
-				printf("(%d %d) \n", preMove.kingPreMove[j][i]>>4, preMove.kingPreMove[j][i] &15);*/
-
-		std::cout << "id name XQ_Muggle" << std::endl;
+		std::cout << "id name XQ_Muggle_522" << std::endl;
 		std::cout << "id copyright 2021-2022 TongJi" << std::endl;
 		std::cout << "id copyright 2021-2022 TongJi" << std::endl;
 		std::cout << "id author Team Ten" << std::endl;
@@ -49,8 +98,7 @@ int main()
 	}
 	while (!isQuit)
 	{
-
-		ucciComEnum com = IdleCom(UcciComPosit, UcciComGoTime);
+		ucciComEnum com = IdleCom(UcciComPosit);
 		if (com == comIsready)
 		{
 			std::cout << "readyok" << std::endl;
@@ -58,106 +106,41 @@ int main()
 		}
 		else if (com == comPositon)
 		{
+			ClearHash();
 			board.ClearBoard();
 			Board(UcciComPosit, board.currentBoard);
-			Moves(UcciComPosit, board.currentBoard);
 			board.GetCurrentPosition();
 			board.playerSide = UcciComPosit.player;
 			board.InitValue();
+			Moves(UcciComPosit, board.currentBoard);
+			PreEvaluate();/**/
+			
+			
 			cout << board.zobr.dwKey << endl;
 			cout << openBookKey << endl;
+			printboard();
 
-			printf("nowPlayer=%d red=%d balck=%d nowVal=%d\n", board.playerSide, board.redVal, board.blackVal, board.Evaluate());
-			for (int i = 2; i <= 0xc; printf("\n"), i++)
-				for (int j = 2; j <= 0xb; j++)
-				{
-					if (i == 2 && j == 2)
-					{
-						printf("  ");
-						continue;
-					}
-					if (i == 2)
-					{
-						printf(" %c ", 'A' + j - 3);
-						continue;
-					}
-					if (j == 2)
-					{
-						printf("%d ", 9 - i + 3);
-						continue;
-					}/**/
-					if (board.currentBoard[(i << 4) + j] == 0)
-						printf("0");
-					printf("%d ", board.currentBoard[(i << 4) + j]);
-
-				}
-
-			/*for (int i = 2; i <= 0xc; printf("\n"), i++)
-				for (int j = 2; j <= 0xb; j++)
-				{
-					if (i == 2 && j == 2)
-					{
-						printf("  ");
-						continue;
-					}
-					if (i == 2)
-					{
-						printf(" %c ", 'A' + j - 3);
-						continue;
-					}
-					if (j == 2)
-					{
-						printf("%d ", 9 - i + 3);
-						continue;
-					}
-					int pos = (i << 4) + j;
-					if (board.currentBoard[pos + 14 - ((pos & 15) << 1)] == 0)
-						printf("0");
-					printf("%d ", board.currentBoard[pos + 14 - ((pos & 15) << 1)]);
-
-				}*/
-
-
-		}//position startpos moves c3c4 g6g5 b2e2 position startpos moves g3g4 c6c5 h2e2
+		}
 		else if (com == comGoTime)
 		{
-			int Move = MainSearch(board);
-			cout << "Õâ¸ö×Å·¨£º" << Move << endl;
+			uint16 Move = MainSearch();
 			PrintMoves(Move, getMoves);
+			if (!board.LegalMove(Move))
+			{
+				std::cout << "nobestmove" << std::endl;
+				fflush(stdout);
+				break;
+			}
 			std::cout << "bestmove " << getMoves << std::endl;
 
-			board.MakeInCheckMove(Move);
-			for (int i = 2; i <= 0xc; printf("\n"), i++)
-				for (int j = 2; j <= 0xb; j++)
-				{
-					if (i == 2 && j == 2)
-					{
-						printf("  ");
-						continue;
-					}
-					if (i == 2)
-					{
-						printf(" %c ", 'A' + j - 3);
-						continue;
-					}
-					if (j == 2)
-					{
-						printf("%d ", 9 - i + 3);
-						continue;
-					}
-					if (board.currentBoard[(i << 4) + j] == 0)
-						printf("0");
-					printf("%d ", board.currentBoard[(i << 4) + j]);
-
-				}
+			board.MakeMove(Move);
+			printboard();
 
 			fflush(stdout);
 
 		}
 		else if (com == comQuit)
-		{
 			isQuit = true;
-		}
 	}
 	printf("bye");
 	return 0;

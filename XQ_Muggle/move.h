@@ -4,7 +4,7 @@
 
 #include "base.h"
 #include "board.h"
-#include "sortmove.h"
+
 
 struct BestMove
 {
@@ -12,12 +12,9 @@ struct BestMove
 	int BestMove;
 };
 
-//BestMove AlphaBeta(boardStruct& Board, int Alpha/*initial negative inf*/, int Beta/*initial postive inf*/);
-int MainSearch(boardStruct& board);
-//BestMove PVS(boardStruct& Board, int Alpha, int Beta);
-BestMove PVS(boardStruct& Board, int Alpha, int Beta, bool bNoNull = false);
-int QuiescSearch(boardStruct& Board, int Alpha, int Beta);
-
-int GetRandomMove(boardStruct& Board);
+int MainSearch();
+int PVS(int depth,int Alpha, int Beta, bool bNoNull = false);
+int searchRoot(int depth);
+int QuiescSearch( int Alpha, int Beta);
 void PRINT(int Move);
 #endif

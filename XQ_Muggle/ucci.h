@@ -1,34 +1,30 @@
 #pragma once
-#include "tools.h"
-#include"base.h"
-#include"board.h"
+#include "base.h"
+#include "board.h"
 
 
-const int maxInputLen = 8192; //所接受指令的最大长度
+const int maxInputLen = 8192; //锟斤拷锟斤拷锟斤拷指锟斤拷锟斤拷锟襟长讹拷
 const int maxMovesNum = 120;
 
-/*所读取到的指令的类型*/
-enum ucciComEnum {
+/*锟斤拷锟斤拷取锟斤拷锟斤拷指锟斤拷锟斤拷锟斤拷锟?*/
+enum ucciComEnum 
+{
 	comUcci, comIsready, comPositon, comGoTime, comQuit, comUnkown
 };
 
 
 
-struct UcciComPositStruct {
-	const char* fen;  //指令中的FEN串或者
-	int movesNum;    //FEN串中代表局面的后续着法数
-	uint32_t* followUpMoves; //后续着法
+struct UcciComPositStruct 
+{
+	const char* fen;  //指锟斤拷锟叫碉拷FEN锟斤拷锟斤拷锟斤拷
+	int movesNum;    //FEN锟斤拷锟叫达拷锟斤拷锟斤拷锟斤拷暮锟斤拷锟斤拷欧锟斤拷锟?
+	uint32_t* followUpMoves; //锟斤拷锟斤拷锟脚凤拷
 	int8 player;
 
 };
 
-struct UcciComGoTimeStruct {
-	int thinkingTime;   // 引擎的思考时间
-};
-
-
 ucciComEnum BootCom();
-ucciComEnum IdleCom(UcciComPositStruct& UcciComPosit, UcciComGoTimeStruct& UcciComGoTime);
+ucciComEnum IdleCom(UcciComPositStruct& UcciComPosit);
 void Board(UcciComPositStruct& UcciComPosit, uint8* currentBoard);
 void Moves(const UcciComPositStruct& UcciComPosit, uint8* currentBoard);
 void PrintMoves(int Move, char* moves);

@@ -1,15 +1,15 @@
 #include "move.h"
 #include "ucci.h"
 #include "hash.h"
+#include "base.h"
 #include "buffer.h"
-/*// 调整型局面评价函数
-inline int Evaluate(const boardStruct& Board) {
-    int vl;
-    vl = Board.Evaluate();
-    return vl == Board.DrawValue() ? vl - 1 : vl;
-}*/
-extern int additionalDepth;
-const long long MAX_TIME = 3000;               //最长搜索时间
+#include "sortmove.h"
+
+const long long MAX_TIME = 2000;        //最长搜索时间
+
+extern boardStruct board;
+
+extern uint16 wmvKiller[LIMIT_DEPTH][2];//杀手着法表
 
 void PRINT(int Move)
 {
@@ -20,129 +20,73 @@ void PRINT(int Move)
     int beginCol = beginPos & 15;
     int endLine = endPos >> 4;
     int endCol = endPos & 15;
-    //char moves[5];
     moves[0] = beginCol - 3 + 'a';
     moves[1] = 12 - beginLine + '0';
     moves[2] = endCol - 3 + 'a';
     moves[3] = 12 - endLine + '0';
     moves[4] = '\0';
-    printf("%s\n", moves);
+    printf("%s", moves);
 }
+
+extern void printboard();
+
+BestMove path[100];
+
+/***************************************/
+// 重复裁剪
+static int RepPruning(int vlBeta)
+{
+    int vlRep = board.RepStatus();
+    if (vlRep > 0) 
+        return board.RepValue(vlRep);
+    return -MATE_VALUE;
+}
+/******************************************/
 
 /*
-时代的眼泪
-uint32 AlphaBeta(boardStruct & Board)
-传入当前棋盘
-AlphaBeta剪枝
-当一个 Min 节点的 β值≤任何一个父节点的α值时 ，剪掉该节点的所有子节点
-当一个 Max 节点的 α值≥任何一个父节点的β值时 ，剪掉该节点的所有子节点
-在一个节点中，α、β只有一个产生作用
-BestMove AlphaBeta(boardStruct& Board, int Alpha, int Beta)
-{
-    if (Board.nowDepth == DEPTH)
-    {
-        return { Board.Evaluate(), 0 };
-    }
-    int Val = 0, bestVal = MIN_VAL, bestMove = 0;
-    int Moves[MAX_MOVES];
-    int numOfMoves = Board.GenerateMove(Moves);
-
-    for (int i = 0; i < numOfMoves; i++)//遍历着法
-    {
-        Board.MakeInCheckMove(Moves[i]);
-        if (Board.InCheck())
-        {
-            Board.UndoMakeInCheckMove();
-            continue;
-        }
-        Board.UndoMakeInCheckMove();
-        Board.MakeMove(Moves[i]);
-        Val = -AlphaBeta(Board, -Beta, -Alpha).Val;
-        Board.UndoMakeMove();
-
-        if (Val > bestVal)
-        {
-            if (Val >= Beta)
-            {
-                return { Val, Moves[i] };
-            }
-            bestVal = Val;
-            bestMove = Moves[i];
-            if (Val > Alpha)
-            {
-                //hashf = HASH_PV;
-                Alpha = Val;
-            }
-        }
-        if (GetTime() - beginSearchTime >= MAX_TIME)
-        {
-            isNormalEnd = 0;
-            return { bestVal,bestMove };
-        }
-    }
-    return { bestVal,bestMove };
-}*/
-
-
-int GetRandomMove(boardStruct& Board)
-{
-    int Moves[MAX_MOVES];
-    Board.GenerateMove(Moves);
-    return Moves[1];
-}
-
-int MAX(int a, int b)
-{
-    return a > b ? a : b;
-}
-
-/*
-BestMove QuiescSearchh(boardStruct& Board, int Alpha, int Beta)
+BestMove QuiescSearchh(boardStruct& board, int Alpha, int Beta)
 静态搜索，用法同AlphaBeta。在主要变例搜索到叶节点时使用静态搜索代替直接返回局面估值，防止水平线效应。
 */
-int QuiescSearch(boardStruct& Board, int Alpha, int Beta)
+int QuiescSearch(int Alpha, int Beta)
 {
-    if (Board.nowDepth == LIMIT_DEPTH)//若达到最大搜索深度返回估值
+    if (-MATE_VALUE + board.nowDepth >= Beta)
+        return -MATE_VALUE + board.nowDepth;
+    // 重复裁剪；
+    int vlRep = board.RepStatus();
+    if (vlRep)
+        return board.RepValue(vlRep);/**/
+    if (board.nowDepth == LIMIT_DEPTH)//若达到最大搜索深度返回估值
     {
-        return Board.Evaluate();
+        return board.Evaluate();
     }
-    int Val = 0, bestVal = MIN_VAL;
+    int Val = 0, bestVal = -MATE_VALUE;
     int Moves[MAX_MOVES];
     int numOfMoves=0;
-    if(Board.InCheck())//若当前在将军，则返回所有着法
-        numOfMoves = SortMove(board, Moves,HISTORY);
+    if(board.InCheck())//若当前在将军，则返回所有着法
+        numOfMoves = SortMove(Moves,HISTORY);
     else
     {
-        Val = Board.Evaluate();
+        Val = board.Evaluate();
         if (Val >= Beta)
             return Val;
         bestVal = Val;
         Alpha = MAX(Alpha, Val);
-        numOfMoves = SortMove(board, Moves,MVVLVA,true);//否则返回所有吃子着法，即局面大分变化着法
+        numOfMoves = SortMove(Moves,MVVLVA,true);//否则返回所有吃子着法，即局面大分变化着法
     }
     
     for (int i = 0; i < numOfMoves; i++)//遍历着法
     {
-        /*Board.MakeInCheckMove(Moves[i]);
-        if (Board.InCheck())
+        board.MakeMove(Moves[i]);
+        board.ChangeSide();
+        if (board.InCheck())
         {
-            Board.UndoMakeInCheckMove();
+            board.UndoMakeMove();
+            board.ChangeSide();
             continue;
         }
-        Board.UndoMakeInCheckMove();*/
-
-
-        Board.MakeMove(Moves[i]);
-        Board.ChangeSide();
-        if (Board.InCheck())
-        {
-            Board.UndoMakeMove();
-            Board.ChangeSide();
-            continue;
-        }
-        Board.ChangeSide();
-        Val = -QuiescSearch(Board, -Beta, -Alpha);
-        Board.UndoMakeMove();
+        board.ChangeSide();
+        Val = -QuiescSearch(-Beta, -Alpha);
+        board.UndoMakeMove();
 
         if (Val > bestVal)
         {
@@ -156,12 +100,6 @@ int QuiescSearch(boardStruct& Board, int Alpha, int Beta)
                 Alpha = Val;
             }
         }
-
-        /*if (Board.nowDepth == LIMIT_DEPTH -4)
-        {
-            printf("num=%d nowval=%d bestval=%d Alpha=%d Beta=%d\n\n", numOfMoves, Val, bestVal, Alpha, Beta);
-        }*/
-
         if (GetTime() - beginSearchTime >= MAX_TIME)
         {
             isNormalEnd = 0;
@@ -169,198 +107,194 @@ int QuiescSearch(boardStruct& Board, int Alpha, int Beta)
         }
     }
 
-    return bestVal==MIN_VAL?Board.nowDepth+MIN_VAL:bestVal;
+    return bestVal==-MATE_VALUE?board.nowDepth-MATE_VALUE:bestVal;
 }
 
 
 /*空着裁剪*/
 const bool NO_NULL = true; // "SearchCut()"的参数，是否禁止空着裁剪
-const int NULL_MARGIN = 500;   // 空步裁剪的子力边界，过于粗糙
+const int NULL_MARGIN = 400;   // 空步裁剪的子力边界，过于粗糙
 
 #define R 2
 
-extern int historyTable[65536];
-
-inline void ClearHistory()
-{
-    memset(historyTable, 0, sizeof(historyTable));
+bool NullOkay()// 判断是否允许空步裁剪
+{                 
+    return (board.playerSide == 0 ? board.redVal : board.blackVal) > NULL_MARGIN;
 }
 
-inline void UpdateHistory(int move, int depth)
-{
-    historyTable[move] += depth * depth;
+bool NullSafe()// 判断是否允许空步裁剪
+{                 
+    return (board.playerSide == 0 ? board.redVal : board.blackVal) > 230;
 }
 
-bool NullOkay(boardStruct& Board)
-{                 // 判断是否允许空步裁剪
-    return (Board.playerSide == 0 ? Board.redVal : Board.blackVal) > NULL_MARGIN;
-}
 /*
-BestMove PVS(boardStruct& Board,int Alpha, int Beta)
+BestMove PVS(boardStruct& board,int Alpha, int Beta)
 主要变例搜索，调用方法同AlphaBeta
 带置换表裁剪、空着裁剪、历史启发
 */
-BestMove PVS(boardStruct& Board, int Alpha, int Beta, bool bNoNull)
+int PVS(int depth, int Alpha, int Beta, bool bNoNull)
 {
+    
+    if (depth<=0)
+        return QuiescSearch(Alpha, Beta);
 
-    if (Board.nowDepth >= DEPTH)
-    {
-        /*if (!bNoNull)
-            additionalDepth = DEPTH;
-        else
-            additionalDepth = 0;*/
-        additionalDepth = Board.nowDepth;
-        return { QuiescSearch(Board, Alpha, Beta), 0 };
-    }
+    if (board.nowDepth == MAX_DEPTH)
+        return board.Evaluate();
 
-    int hashf = HASH_ALPHA;
+    if (-MATE_VALUE + board.nowDepth >= Beta)
+        return -MATE_VALUE + board.nowDepth;
+    // 重复裁剪；
+    /**/int vlRep = board.RepStatus();
+    if (vlRep)
+        return board.RepValue(vlRep);
+
+
     //搜索前先在置换表中查找
-    int mv;
-    int hashDepth;
-    int vl = LookUpHash(Board, Alpha, Beta, Board.nowDepth, mv, hashDepth);
+    int mv=0;
+    int vl = LookUpHash(Alpha, Beta, depth ,mv);
     if (vl > -MATE_VALUE)
-    {
-        //std::cout << "分值：" << vl << " 着法：" << mv << '\n';
-        //if (mv == 0 && Board.nowDepth || mv != 0)
-        additionalDepth = hashDepth + Board.nowDepth;
-        return { vl,mv };
-    }/**/
-
-    if (Board.nowDepth == MAX_DEPTH)
-    {
-        additionalDepth = MAX_DEPTH;
-        return { Board.Evaluate(), 0 };
-    }
-    int val = 0, bestVal = MIN_VAL, bestMove = 0;
-
+        return vl;/**/
+    
+    int val = 0, bestVal = -MATE_VALUE, bestMove = 0,hashf = HASH_ALPHA;
     //尝试空着裁剪；
-    if (!bNoNull && !Board.InCheck() && NullOkay(Board)) {
-        Board.NullMove();
-        Board.nowDepth += R;
-        val = -PVS(Board, -Beta, -Beta + 1, NO_NULL).Val;
-        Board.nowDepth -= R;
-        Board.UndoNullMove();
+    if (!bNoNull && !board.InCheck() && NullOkay()) 
+    {
+        board.NullMove();
+        val = -PVS(depth-R-1, -Beta, -Beta + 1, NO_NULL);
+        board.UndoNullMove();
 
         if (val >= Beta) 
         {
-            return { val,0 };
+            if (NullSafe()) return val;
+            if (PVS(depth - R, Alpha, Beta, NO_NULL)>= Beta)
+                return val;
         }
-    }/**/
+    }
 
-    int Moves[MAX_MOVES];
-    int numOfMoves = SortMove(Board, Moves,HISTORY);
-
-    struct tempHashNode
+    sortMoveStruct MoveSort;
+    MoveSort.Init();
+    int move;
+    while ((move = MoveSort.Next()))//遍历着法
     {
-        int Val;
-        int Move;
-        int Depth;
-    };
-    tempHashNode tmpHash;
-    tmpHash.Val = MIN_VAL;
-    tmpHash.Move = 0;
-    tmpHash.Depth = 0;
-    for (int i = 0; i < numOfMoves; i++)//遍历着法
-    {
-        /*Board.MakeInCheckMove(Moves[i]);
-        if (Board.InCheck())
-        {
-            Board.UndoMakeInCheckMove();
-            continue;
-        }
-        Board.UndoMakeInCheckMove();*/
-
-
-        Board.MakeMove(Moves[i]);
-        Board.ChangeSide();
-        if (Board.InCheck())
-        {
-            Board.UndoMakeMove();
-            Board.ChangeSide();
-            continue;
-        }
-        Board.ChangeSide();
         
-        if (bestVal == MIN_VAL)
+        board.MakeMove(move);
+        board.ChangeSide();
+        if (board.InCheck())
         {
-            val = -PVS(Board, -Beta, -Alpha).Val;
+            board.UndoMakeMove();
+            board.ChangeSide();
+            continue;
         }
+        board.ChangeSide();
+
+        int nextDepth=board.InCheck()?depth:depth-1;
+        if (bestVal == -MATE_VALUE)
+            val = -PVS(nextDepth, -Beta, -Alpha);
         else
         {
-            val = -PVS(Board, -Alpha - 1, -Alpha).Val;
+            val = -PVS(nextDepth,-Alpha - 1, -Alpha);
             if (val > Alpha&& val < Beta)
-            {
-                val = -PVS(Board, -Beta, -Alpha).Val;
-            }
+                val = -PVS(nextDepth,-Beta, -Alpha);
         }
-        Board.UndoMakeMove();
-
+        board.UndoMakeMove();
 
         if (val > bestVal)
         {
             bestVal = val;
-            bestMove = Moves[i];
             if (val >= Beta)
             {
-                if (additionalDepth - Board.nowDepth >= tmpHash.Depth)
-                {
-                    tmpHash.Val = val;
-                    tmpHash.Move = Moves[i];
-                    tmpHash.Depth = additionalDepth - Board.nowDepth;
-                    hashf = HASH_BETA;
-                }
+                bestMove = move;
+                hashf = HASH_BETA;
                 break;
             }
 
             if (val > Alpha)
             {
+                bestMove = move;
+                path[board.nowDepth] = { val,move };
                 hashf = HASH_PV;
                 Alpha = val;
             }
+        }
+        
+        if (GetTime() - beginSearchTime >= MAX_TIME)
+        {
+            isNormalEnd = 0;
+            return bestVal;
+        }
+    }
+    if (isNormalEnd)
+    {
+        StoreHash(hashf,bestMove, bestVal, depth);//添加置换项
+        SetBestMove(bestMove, depth, wmvKiller[board.nowDepth]);
+    }
+    
+    return bestVal;
+}
+
+
+int searchRoot(int depth)
+{
+    int val = 0, bestVal = -MATE_VALUE, bestMove = 0;
+    sortMoveStruct MoveSort;
+    MoveSort.Init();
+    int move;
+    while ((move = MoveSort.Next()))//遍历着法
+    {
+        board.MakeMove(move);
+        board.ChangeSide();
+        if (board.InCheck())
+        {
+            board.UndoMakeMove();
+            board.ChangeSide();
+            continue;
+        }
+        board.ChangeSide();
+
+        int nextDepth = board.InCheck() ? depth : depth - 1;
+        if (bestVal == -MATE_VALUE)
+            val = -PVS(nextDepth, -MATE_VALUE, MATE_VALUE,1);
+        else
+        {
+            val = -PVS(nextDepth, -bestVal - 1, -bestVal);
+            if (val > bestVal)
+                val = -PVS(nextDepth, -MATE_VALUE, -bestVal,1);
+        }
+        board.UndoMakeMove();
+
+        if (val > bestVal)
+        {
+            bestVal = val;
+            bestMove = move;
+            path[board.nowDepth] = { val,move };
         }
 
         if (GetTime() - beginSearchTime >= MAX_TIME)
         {
             isNormalEnd = 0;
-            return { bestVal,bestMove };
+            return bestVal;
         }
     }
-    if (isNormalEnd&&bestMove) 
-    {
-        StoreHash(Board, hashf, bestMove, bestVal, additionalDepth - Board.nowDepth);//添加置换项
-        UpdateHistory(bestMove, DEPTH-board.nowDepth);
-        /*if (Board.nowDepth == 0)
-        {
-            printf("now_MAX_DEPTH=%d Alpha=%d Beta=%d\n", DEPTH,Alpha,Beta);
-
-            printf("flag=%d now_HASH_ALPHA_val=%d depth=%d Move=",hashf, bestVal, additionalDepth - Board.nowDepth);
-            PRINT(bestMove);
-
-            printf("\n");
-        }*/
-        
-    }
-    return { bestVal,bestMove };
+    if(isNormalEnd)
+        SetBestMove(bestMove, depth, wmvKiller[board.nowDepth]);
+    return bestMove;
 }
-
-
 
 /*
 int MainSearch(boardStruct& board)
 将所有零散变量整合在MainSearch中，调用MainSearch，传入棋盘，返回着法
 */
-int MainSearch(boardStruct& Board)
+int MainSearch()
 {
     beginSearchTime= GetTime();
 
-    printf("key=%llu 对称key=%llu\n", board.zobr.dwKey,openBookKey);
-    if (openBookFlag)
+    /*if (openBookFlag)
     {
         int chooseFrom = 0;
         int index1 = lower_bound(OpenBook, OpenBook + 596737, Book{ board.zobr.dwKey,0 }) - OpenBook;
         if( index1<=596737&&OpenBook[index1].HashKey == board.zobr.dwKey)
         {
-            PRINT(OpenBook[index1].Move);
+            //PRINT(OpenBook[index1].Move);
             chooseFrom = 1;
             //return OpenBook[index1].Move;
         }
@@ -370,7 +304,7 @@ int MainSearch(boardStruct& Board)
         {
             if(chooseFrom==1&&OpenBook[index2].Score<=OpenBook[index1].Score)
                 return OpenBook[index1].Move;
-            PRINT(OpenBook[index2].Move);
+            //PRINT(OpenBook[index2].Move);
             uint16 Move = OpenBook[index2].Move;
             uint8 Begin = Move & 255;
             uint8 End = Move >> 8;
@@ -379,27 +313,39 @@ int MainSearch(boardStruct& Board)
             End = End  - ((End & 15) << 1)+ 14;
             Move = (End << 8) + Begin;
 
-            PRINT(Move);
+            //PRINT(Move);
             return Move;
         }
         if(chooseFrom==1)
             return OpenBook[index1].Move;
         openBookFlag = 0;
-    }
+    }*/
     
 
-    BestMove Move = {MIN_VAL,0};
-
+    int Move = 0;
     isNormalEnd = 1;
-    DEPTH = 2;
-    while (isNormalEnd&&DEPTH<=MAX_DEPTH)
+    int depth = 2;
+    while (isNormalEnd&&depth<=MAX_DEPTH)
     {
-        BestMove tmpMove = PVS(Board, MIN_VAL, MAX_VAL);
-        if (isNormalEnd&&tmpMove.BestMove)
+        memset(path, 0, sizeof(path));
+        int tmpMove = searchRoot(depth);
+        if (!isNormalEnd)
+            break;
+        printf("depth=%d time=%lld move=%d ", depth,GetTime()-beginSearchTime,tmpMove);
+        PRINT(tmpMove);
+        printf("\n");
+        int i;
+        for (i = 0;path[i].BestMove; i++)
+        {
+            PRINT(path[i].BestMove);
+            printf("(%d) -> ",path[i].Val);
+        }
+        printf(" i=%d\n\n",i);
+        if (isNormalEnd&&tmpMove)
             Move = tmpMove;
-        printf("depth=%d time=%lld\n", DEPTH,GetTime()-beginSearchTime);
-        DEPTH++;
+        depth++;
+
         //迭代加深
     }
-    return Move.BestMove;/**/
+    return Move;/**/
 }
