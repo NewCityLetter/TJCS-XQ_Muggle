@@ -7,21 +7,21 @@
 
 struct PreMove
 {
-    uint8 kingPreMove[8][256];
-    uint8 advisorPreMove[8][256];
-    uint8 bishopPreMove[8][256];
-    uint8 bishopEye[8][256];
-    uint8 knightPreMove[12][256];
-    uint8 knightLeg[12][256];
-    uint8 pawnPreMove[2][4][256];
-    int16 rookLinePreMove[12][4096][2];  //位置/状态/左右
-    int16 rookColPreMove[13][8192][2];   //位置/状态/左右
+    int32 kingPreMove[8][256];
+    int32 advisorPreMove[8][256];
+    int32 bishopPreMove[8][256];
+    int32 bishopEye[8][256];
+    int32 knightPreMove[12][256];
+    int32 knightLeg[12][256];
+    int32 pawnPreMove[2][4][256];
+    int32 rookLinePreMove[12][4096][2];  //位置/状态/左右
+    int32 rookColPreMove[13][8192][2];   //位置/状态/左右
 
-    int16 cannonLinePreCap[12][4096][2]; //位置/状态/左右
-    int16 cannonColPreCap[13][8192][2];  //位置/状态/左右
+    int32 cannonLinePreCap[12][4096][2]; //位置/状态/左右
+    int32 cannonColPreCap[13][8192][2];  //位置/状态/左右
 
-    int16 cannonSupLine[12][4096][2];//位置/状态/左右
-    int16 cannonSupCol[13][8192][2]; //位置/状态/左右
+    int32 cannonSupLine[12][4096][2];//位置/状态/左右
+    int32 cannonSupCol[13][8192][2]; //位置/状态/左右
 
 };
 static int bitMaskLine[256]={

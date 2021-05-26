@@ -9,7 +9,7 @@ const long long MAX_TIME = 2000;        //最长搜索时间
 
 extern boardStruct board;
 
-extern uint16 wmvKiller[LIMIT_DEPTH][2];//杀手着法表
+extern int32 wmvKiller[LIMIT_DEPTH][2];//杀手着法表
 
 void PRINT(int Move)
 {

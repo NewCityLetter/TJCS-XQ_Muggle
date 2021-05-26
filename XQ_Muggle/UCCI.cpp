@@ -100,9 +100,7 @@ ucciComEnum IdleCom(UcciComPositStruct& UcciComPosit)
 	cin.getline(readStr, maxInputLen);
 
 	strP = readStr;
-	/*Log a;
-	a.baseMsg();
-	a.error(strP);*/
+	a.error(strP);
 
 	if (MyStrcasencmp(strP, "isready", 7) == 0)
 	{
@@ -189,7 +187,7 @@ static int JudgeChess(char ch)
   返 回 值：
   说    明：
 ***************************************************************************/
-void Board(UcciComPositStruct& UcciComPosit, uint8* currentBoard)
+void Board(UcciComPositStruct& UcciComPosit, int32* currentBoard)
 {
 	const char* strP = UcciComPosit.fen;
 	int i, j, spe;//x坐标，y坐标，棋子的种类
@@ -263,7 +261,7 @@ void Board(UcciComPositStruct& UcciComPosit, uint8* currentBoard)
   返 回 值：
   说    明：
 ***************************************************************************/
-void Moves(const UcciComPositStruct& UcciComPosit, uint8* currentBoard)
+void Moves(const UcciComPositStruct& UcciComPosit, int32* currentBoard)
 {
 	int i;
 	//int fourthBit, thirdBit, secondBit, firstBit;  //一个uint32_t数从右到左的第四位，第三位，第二位，第一位
@@ -329,7 +327,7 @@ static char NumberToChar(int8 number)
   返 回 值：
   说    明：
 ***************************************************************************/
-void GenerateFen(const int8* currentBoard, const UcciComPositStruct UcciComPosit)
+void GenerateFen(const int32* currentBoard, const UcciComPositStruct UcciComPosit)
 {
 	int i, j, m = 0, n;
 	char chFen[maxInputLen];

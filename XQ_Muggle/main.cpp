@@ -17,7 +17,7 @@ PreMove preMove;
 bool isNormalEnd = 1;					//标志当前是否正常弹出
 bool openBookFlag = 1;					//标记是否从开局库中查询
 long long beginSearchTime = 0;          //开始搜索的时间
-uint16 wmvKiller[LIMIT_DEPTH][2];		//杀手着法表
+int32 wmvKiller[LIMIT_DEPTH][2];		//杀手着法表
 uint64_t openBookKey;					//对称局面Key
 
 extern void ClearHash();
@@ -89,7 +89,7 @@ int main()
 	else
 	{
 		GetPreMove();
-		std::cout << "id name XQ_Muggle_522" << std::endl;
+		std::cout << "id name XQ_Muggle_526" << std::endl;
 		std::cout << "id copyright 2021-2022 TongJi" << std::endl;
 		std::cout << "id copyright 2021-2022 TongJi" << std::endl;
 		std::cout << "id author Team Ten" << std::endl;

@@ -5,13 +5,13 @@
 
 #include <string>
 #include <fstream>
-
+const char path[20] = "./log.txt";
 class Log
 {
 private:
 	std::ofstream out;
 	bool on = true;
-	char path[20] = "./log.txt";
+	
 public:
 	void clear();
 	void baseMsg();
@@ -53,5 +53,5 @@ void Log::add(T msg, bool end)
 	else out.close();
 }
 
-
+extern Log a;
 #endif  

@@ -25,6 +25,6 @@ struct UcciComPositStruct
 
 ucciComEnum BootCom();
 ucciComEnum IdleCom(UcciComPositStruct& UcciComPosit);
-void Board(UcciComPositStruct& UcciComPosit, uint8* currentBoard);
-void Moves(const UcciComPositStruct& UcciComPosit, uint8* currentBoard);
+void Board(UcciComPositStruct& UcciComPosit, int32* currentBoard);
+void Moves(const UcciComPositStruct& UcciComPosit, int32* currentBoard);
 void PrintMoves(int Move, char* moves);

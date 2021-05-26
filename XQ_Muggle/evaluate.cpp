@@ -1,12 +1,19 @@
 #include "base.h"
 #include "board.h"
-#define TOTAL_MIDGAME_VALUE 66
-#define TOTAL_ADVANCED_VALUE 4
-#define TOTAL_ATTACK_VALUE 8
-#define ADVISOR_BISHOP_ATTACKLESS_VALUE 80
-int vlAdvanced;                      //先行权因素的分值
-int pieceValueTable[7][256];        //计算出的子力价值表
+using namespace std;
 
+const int TOTAL_MIDGAME_VALUE = 66;
+const int TOTAL_ADVANCED_VALUE = 4;
+const int TOTAL_ATTACK_VALUE = 8;
+const int ADVISOR_BISHOP_ATTACKLESS_VALUE = 80;
+const int TOTAL_ADVISOR_LEAKAGE = 80;
+int32 vlAdvanced;                      //先行权因素的分值
+int32 redValueTable[7][256];        //计算出的子力价值表
+int32 blackValueTable[7][256];        //计算出的子力价值表
+
+int32 vlHollowThreat[16];
+int32 vlRedBottomThreat[16], vlBlackBottomThreat[16];
+int32 vlBlackAdvisorLeakage, vlRedAdvisorLeakage;//缺士怕双车的罚分
 extern boardStruct board;
 
 inline bool RED_HALF(int sq) {
@@ -17,7 +24,7 @@ inline bool BLACK_HALF(int sq) {
     return (sq & 0x80) == 0;
 }
 // 1. 开中局、有进攻机会的帅(将)和兵(卒)
-static const uint8_t cucvlKingPawnMidgameAttacking[256] = {
+static const int32 cucvlKingPawnMidgameAttacking[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -37,7 +44,7 @@ static const uint8_t cucvlKingPawnMidgameAttacking[256] = {
 };
 
 // 2. 开中局、没有进攻机会的帅(将)和兵(卒)
-static const uint8_t cucvlKingPawnMidgameAttackless[256] = {
+static const int32 cucvlKingPawnMidgameAttackless[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -57,7 +64,7 @@ static const uint8_t cucvlKingPawnMidgameAttackless[256] = {
 };
 
 // 3. 残局、有进攻机会的帅(将)和兵(卒)
-static const uint8_t cucvlKingPawnEndgameAttacking[256] = {
+static const int32 cucvlKingPawnEndgameAttacking[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -77,7 +84,7 @@ static const uint8_t cucvlKingPawnEndgameAttacking[256] = {
 };
 
 // 4. 残局、没有进攻机会的帅(将)和兵(卒)
-static const uint8_t cucvlKingPawnEndgameAttackless[256] = {
+static const int32 cucvlKingPawnEndgameAttackless[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -97,7 +104,7 @@ static const uint8_t cucvlKingPawnEndgameAttackless[256] = {
 };
 
 // 5. 没受威胁的仕(士)和相(象)
-static const uint8_t cucvlAdvisorBishopThreatless[256] = {
+static const int32 cucvlAdvisorBishopThreatless[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -118,7 +125,7 @@ static const uint8_t cucvlAdvisorBishopThreatless[256] = {
 
 
 // 5. 受到威胁的仕(士)和相(象)
-static const uint8_t cucvlAdvisorBishopThreatened[256] = {
+static const int32 cucvlAdvisorBishopThreatened[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -138,7 +145,7 @@ static const uint8_t cucvlAdvisorBishopThreatened[256] = {
 };
 
 // 6. 开中局的马
-static const uint8_t cucvlKnightMidgame[256] = {
+static const int32 cucvlKnightMidgame[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -158,7 +165,7 @@ static const uint8_t cucvlKnightMidgame[256] = {
 };
 
 // 7. 残局的马
-static const uint8_t cucvlKnightEndgame[256] = {
+static const int32 cucvlKnightEndgame[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -178,7 +185,7 @@ static const uint8_t cucvlKnightEndgame[256] = {
 };
 
 // 8. 开中局的车
-static const uint8_t cucvlRookMidgame[256] = {
+static const int32 cucvlRookMidgame[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -198,7 +205,7 @@ static const uint8_t cucvlRookMidgame[256] = {
 };
 
 // 9. 残局的车
-static const uint8_t cucvlRookEndgame[256] = {
+static const int32 cucvlRookEndgame[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -218,7 +225,7 @@ static const uint8_t cucvlRookEndgame[256] = {
 };
 
 // 10. 开中局的炮
-static const uint8_t cucvlCannonMidgame[256] = {
+static const int32 cucvlCannonMidgame[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -238,7 +245,7 @@ static const uint8_t cucvlCannonMidgame[256] = {
 };
 
 // 11. 残局的炮
-static const uint8_t cucvlCannonEndgame[256] = {
+static const int32 cucvlCannonEndgame[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -257,7 +264,7 @@ static const uint8_t cucvlCannonEndgame[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 };
 
-uint8 ucvlPawnPiecesAttacking[256], ucvlPawnPiecesAttackless[256];
+int32 ucvlPawnPiecesAttacking[256], ucvlPawnPiecesAttackless[256];
 
 void PreEvaluate() 
 {
@@ -277,11 +284,11 @@ void PreEvaluate()
             midgameValue += (board.currentPosition[i] == 0 ? 0 : 1);//其余棋子加1
             break;
         case 3://马
+        case 5://炮
             if (i < 32 && board.currentPosition[i] != 0)
                 redSimpleValue++;
             else if (board.currentPosition[i] != 0)
                 blackSimpleValue++;
-        case 5://炮
             midgameValue += (board.currentPosition[i] == 0 ? 0 : 3);//马和炮加3
             break;
         case 4://车
@@ -299,22 +306,23 @@ void PreEvaluate()
     // 使用二次函数，子力很少时才认为接近残局
     midgameValue = (2 * TOTAL_MIDGAME_VALUE - midgameValue) * midgameValue / TOTAL_MIDGAME_VALUE;
     vlAdvanced = (TOTAL_ADVANCED_VALUE * midgameValue + TOTAL_ADVANCED_VALUE / 2) / TOTAL_MIDGAME_VALUE;
-    std::cout << "midgamevalue:" << midgameValue << " advanced:" << vlAdvanced << " ";
+    printf("midgame=%d advance=%d\n", midgameValue, vlAdvanced);
+    //std::cout << "midgamevalue:" << midgameValue << " advanced:" << vlAdvanced << " ";
     //计算子力价值表
     for (int sq = 0; sq < 256; sq++) 
     {
         if (IN_BOARD(sq)) 
         {
-            pieceValueTable[0][sq] = (uint8)
+            redValueTable[0][sq] = blackValueTable[0][SQUARE_FLIP(sq)] = (int32)
                 ((cucvlKingPawnMidgameAttacking[sq] * midgameValue + cucvlKingPawnEndgameAttacking[sq] * (TOTAL_MIDGAME_VALUE - midgameValue)) / TOTAL_MIDGAME_VALUE);
-            pieceValueTable[3][sq] = (uint8)
+            redValueTable[3][sq] = blackValueTable[3][SQUARE_FLIP(sq)] = (int32)
                 ((cucvlKnightMidgame[sq] * midgameValue + cucvlKnightEndgame[sq] * (TOTAL_MIDGAME_VALUE - midgameValue)) / TOTAL_MIDGAME_VALUE);
-            pieceValueTable[4][sq] = (uint8)
+            redValueTable[4][sq] = blackValueTable[4][SQUARE_FLIP(sq)] = (int32)
                 ((cucvlRookMidgame[sq] * midgameValue + cucvlRookEndgame[sq] * (TOTAL_MIDGAME_VALUE - midgameValue)) / TOTAL_MIDGAME_VALUE);
-            pieceValueTable[5][sq] = (uint8)
+            redValueTable[5][sq] = blackValueTable[5][SQUARE_FLIP(sq)] = (int32)
                 ((cucvlCannonMidgame[sq] * midgameValue + cucvlCannonEndgame[sq] * (TOTAL_MIDGAME_VALUE - midgameValue)) / TOTAL_MIDGAME_VALUE);
-            ucvlPawnPiecesAttacking[sq] = pieceValueTable[0][sq];
-            ucvlPawnPiecesAttackless[sq] = (uint8)
+            ucvlPawnPiecesAttacking[sq] = redValueTable[0][sq];
+            ucvlPawnPiecesAttackless[sq] = (int32)
                 ((cucvlKingPawnMidgameAttackless[sq] * midgameValue + cucvlKingPawnEndgameAttackless[sq] * (TOTAL_MIDGAME_VALUE - midgameValue)) / TOTAL_MIDGAME_VALUE);
         }
     }
@@ -349,19 +357,51 @@ void PreEvaluate()
     redAttacks = redAttacks < TOTAL_ATTACK_VALUE ? redAttacks : TOTAL_ATTACK_VALUE;
     blackAttacks = blackAttacks < TOTAL_ATTACK_VALUE ? blackAttacks : TOTAL_ATTACK_VALUE;
     std::cout << "redattack:" << redAttacks << " blackattack:" << blackAttacks << " ";
+    
+    //对空头炮、沉底炮的威胁分值做调整
+    for (int i = 0; i < 16; i++) {
+        vlHollowThreat[i] = HOLLOW_THREAT[i] * (midgameValue + TOTAL_MIDGAME_VALUE) / (TOTAL_MIDGAME_VALUE * 2);
+        vlRedBottomThreat[i] = BOTTOM_THREAT[i] * blackAttacks / TOTAL_ATTACK_VALUE;
+        vlBlackBottomThreat[i] = BOTTOM_THREAT[i] * redAttacks / TOTAL_ATTACK_VALUE;
+    }
+    //计算缺士怕双车的罚分
+    vlBlackAdvisorLeakage = TOTAL_ADVISOR_LEAKAGE * redAttacks / TOTAL_ATTACK_VALUE;
+    vlRedAdvisorLeakage = TOTAL_ADVISOR_LEAKAGE * blackAttacks / TOTAL_ATTACK_VALUE;
     //计算子力价值表
     for (int sq = 0; sq < 256; sq++) 
     {
         if (IN_BOARD(sq)) 
         {
-            pieceValueTable[1][sq] = pieceValueTable[2][sq] = (uint8)((cucvlAdvisorBishopThreatened[sq] * blackAttacks +
+            redValueTable[1][sq] = redValueTable[2][sq] = (int32)((cucvlAdvisorBishopThreatened[sq] * blackAttacks +
                 (cucvlAdvisorBishopThreatless[sq]) * (TOTAL_ATTACK_VALUE - blackAttacks)) / TOTAL_ATTACK_VALUE);
-            pieceValueTable[6][sq] = (uint8)((ucvlPawnPiecesAttacking[sq] * redAttacks +
+            blackValueTable[1][sq] = blackValueTable[2][sq] = (int32)((cucvlAdvisorBishopThreatened[SQUARE_FLIP(sq)] * redAttacks +
+                (cucvlAdvisorBishopThreatless[SQUARE_FLIP(sq)]) * (TOTAL_ATTACK_VALUE - redAttacks)) / TOTAL_ATTACK_VALUE);
+
+            redValueTable[6][sq] = (int32)((ucvlPawnPiecesAttacking[sq] * redAttacks +
                 ucvlPawnPiecesAttackless[sq] * (TOTAL_ATTACK_VALUE - redAttacks)) / TOTAL_ATTACK_VALUE);
+            blackValueTable[6][sq] = (int32)((ucvlPawnPiecesAttacking[SQUARE_FLIP(sq)] * blackAttacks +
+                ucvlPawnPiecesAttackless[SQUARE_FLIP(sq)] * (TOTAL_ATTACK_VALUE - blackAttacks)) / TOTAL_ATTACK_VALUE);
         }
     }
     // 调整不受威胁方少掉的仕(士)相(象)分值
     board.redVal = ADVISOR_BISHOP_ATTACKLESS_VALUE * (TOTAL_ATTACK_VALUE - blackAttacks) / TOTAL_ATTACK_VALUE;
     board.blackVal = ADVISOR_BISHOP_ATTACKLESS_VALUE * (TOTAL_ATTACK_VALUE - redAttacks) / TOTAL_ATTACK_VALUE;
+    std::cout<<"FUCK\n";
+    for(int i=16;i<32;i++)
+    {
+        int pos=board.currentPosition[i];
+        if(pos)
+            board.redVal+=redValueTable[pieceTypes[i]][pos];
+    }
+
+    for(int i=32;i<48;i++)
+    {
+        int pos=board.currentPosition[i];
+        if(pos)
+            board.blackVal+=blackValueTable[pieceTypes[i]][pos];
+    }
+    
     std::cout << "redval:" << board.redVal << " blackval:" << board.blackVal << '\n';
+
+
 }

@@ -6,7 +6,13 @@
 #include "zobrist.h"
 #include "premove.h"
 extern int vlAdvanced;                      //先行权因素的分值
-extern int pieceValueTable[7][256];        //计算出的子力价值表
+extern int redValueTable[7][256];        //计算出的子力价值表
+extern int blackValueTable[7][256];        //计算出的子力价值表
+extern int vlHollowThreat[16];//空头炮威胁分值
+extern int vlRedBottomThreat[16];//沉底炮威胁分值
+extern int vlBlackBottomThreat[16];
+extern int vlBlackAdvisorLeakage;//缺士怕双车的罚分
+extern int vlRedAdvisorLeakage;
 //FROM为起始编号 TO为结束编号
 const int32 KING_FROM = 0;
 const int32 ADVISOR_FROM = 1;
@@ -72,19 +78,19 @@ static const bool ccInFort[256] = {
 
 
 /* 帅(将)的步长*/
-static const int8 ccKingDelta[4] = { -16, -1, 1, 16 };
+static const int32 ccKingDelta[4] = { -16, -1, 1, 16 };
 
 /*仕(士)的步长(移动两次当做相移动一次，减少一个数组)*/
-static const int8 ccAdvisorDelta[4] = { -17, -15, 15, 17 };
+static const int32 ccAdvisorDelta[4] = { -17, -15, 15, 17 };
 
 /*马的步长，以帅(将)的步长作为马腿*/
-static const int8 ccKnightDelta[4][2] = { {-33, -31}, {-18, 14}, {-14, 18}, {31, 33} };
+static const int32 ccKnightDelta[4][2] = { {-33, -31}, {-18, 14}, {-14, 18}, {31, 33} };
 
 /*马被将军的步长，以仕(士)的步长作为马腿*/
-static const int8 ccKnightCheckDelta[4][2] = { {-33, -18}, {-31, -14}, {14, 31}, {18, 33} };
+static const int32 ccKnightCheckDelta[4][2] = { {-33, -18}, {-31, -14}, {14, 31}, {18, 33} };
 
 // 子力位置价值表
-static const uint8 cucvlPiecePos[7][256] = {
+static const int32 cucvlPiecePos[7][256] = {
   {// 帅(将)
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -208,7 +214,7 @@ static const uint8 cucvlPiecePos[7][256] = {
 };
 
 // 空头炮威胁分值，行号 0-16
-const int HOLLOW_THREAT[16] = 
+const int32 HOLLOW_THREAT[16] =
 {
     0,  0,  0,  0,  0,  0, 60, 65, 70, 75, 80, 80, 80,  0,  0,  0
 };
@@ -225,7 +231,7 @@ const int32 BOTTOM_THREAT[16] =
     0,  0,  0, 40, 30,  0,  0,  0,  0,  0, 30, 40,  0,  0,  0,  0
 };
 // 不利于马的位置
-const int32_t N_BAD_SQUARES[256] = {
+const int32 N_BAD_SQUARES[256] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -247,7 +253,7 @@ const int32_t N_BAD_SQUARES[256] = {
 /* 棋子序号对应的棋子类型
    每方的棋子顺序依次是：帅仕仕相相马马车车炮炮兵兵兵兵兵(将士士象象马马车车炮炮卒卒卒卒卒)
  */
-static const int pieceTypes[48] = 
+static const int32 pieceTypes[48] = 
 {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 6, 6, 6,
@@ -270,27 +276,27 @@ inline int32 PIECE_INDEX(int32 chessPiece)
     return chessPiece & 15;
 }
 // 判断棋子是否在九宫中
-inline bool IN_FORT(int pos)
+inline bool IN_FORT(int32 pos)
 {
     return ccInFort[pos];
 }
 // 判断棋子是否在棋盘中
-inline bool IN_BOARD(int pos)
+inline bool IN_BOARD(int32 pos)
 {
     return ccInBoard[pos];
 }
 //向前移动一步
-inline int32 SQUARE_FORWARD(int position, int sidePlayer)
+inline int32 SQUARE_FORWARD(int32 position, int32 sidePlayer)
 {
     return position - 16 + (sidePlayer << 5);
 }
 // 是否未过河
-inline bool HOME_HALF(int position, int sidePlayer)
+inline bool HOME_HALF(int32 position, int32 sidePlayer)
 {
     return (position & 0x80) != (sidePlayer << 7);
 }
 // 是否已过河
-inline bool AWAY_HALF(int position, int sidePlayer)
+inline bool AWAY_HALF(int32 position, int32 sidePlayer)
 {
     return (position & 0x80) == (sidePlayer << 7);
 }
@@ -315,28 +321,28 @@ inline int32 RecordMove(int32 beginPos, int32 endPos)
     return beginPos + (endPos << 8);
 }
 //获取当前坐标编号
-inline uint8 GetOrder(int line, int col)
+inline int32 GetOrder(int32 line, int32 col)
 {
     return (line << 4) + col;
 }
 //翻转格子
-inline int SQUARE_FLIP(int pos) 
+inline int32 SQUARE_FLIP(int32 pos) 
 {
     return 254 - pos;
 }
 
-inline bool SAME_HALF(int beginPos, int endPos) 
+inline bool SAME_HALF(int32 beginPos, int32 endPos) 
 {
   return ((beginPos ^ endPos) & 0x80) == 0;
 }
 
 //根据sq返回行数0 ~ 16
-inline int32_t GETLINE(int32_t sq) {
+inline int32 GETLINE(int32 sq) {
     return sq >> 4;
 }
 
 //根据sq返回列数0 ~ 16
-inline int32_t GETCOL(int32_t sq) {
+inline int32 GETCOL(int32 sq) {
     return sq & 15;
 }
 
@@ -344,13 +350,13 @@ inline int32_t GETCOL(int32_t sq) {
 /********************************************************/
 
 //同行
-inline bool SAME_RANK(int sqSrc, int sqDst) 
+inline bool SAME_RANK(int32 sqSrc, int32 sqDst) 
 {
     return ((sqSrc ^ sqDst) & 0xf0) == 0;
 }
 
 //同列
-inline bool SAME_FILE(int sqSrc, int sqDst) 
+inline bool SAME_FILE(int32 sqSrc, int32 sqDst) 
 {
     return ((sqSrc ^ sqDst) & 0x0f) == 0;
 }
@@ -361,12 +367,12 @@ extern void ClearKiller();
 // 历史走法信息
 struct MoveStruct
 {
-    uint16 wmv;//前八位endpos，后八位beginpos
-    uint16 ucpcCaptured;//capture为被吃子编号
+    int32 wmv;//前八位endpos，后八位beginpos
+    int32 ucpcCaptured;//capture为被吃子编号
     bool ucbCheck;
     uint64 dwKey;//zobrist
 
-    void Set(int mv, int pcCaptured, bool bCheck, uint64 dwKey_)
+    void Set(int32 mv, int32 pcCaptured, bool bCheck, uint64 dwKey_)
     {
         wmv = mv;
         ucpcCaptured = pcCaptured;
@@ -377,19 +383,19 @@ struct MoveStruct
 
 struct boardStruct
 {
-    int8 playerSide;//当前行走方R0/B1
-    uint8 currentBoard[256];
+    int32 playerSide;//当前行走方R0/B1
+    int32 currentBoard[256];
     /*
     当前棋盘16*16 [3-12][3-11]为棋盘
     16-31  帅仕仕相相马马车车炮炮兵兵兵兵兵(R)
     32-47  将士士象象马马车车炮炮卒卒卒卒卒(B)
     0表示无棋子
     */
-    uint8  currentPosition[48];//每个棋子当前位置，0表示被吃
+    int32  currentPosition[48];//每个棋子当前位置，0表示被吃
     int32 redVal, blackVal;//红黑棋子的子力价值
-    uint16 bitLine[13],bitCol[12];
+    int32 bitLine[13],bitCol[12];
     int32 nowDepth, nowMoveNum;
-    uint16 moveHash[LIMIT_DEPTH];
+    int32 moveHash[LIMIT_DEPTH];
     int32 historyTable[65536];
     MoveStruct mvsList[MAX_MOVES];//历史走法信息列表
     ZobristStruct zobr;// Zobrist
@@ -432,17 +438,7 @@ struct boardStruct
             }
         }
     }
-    /*
-    void GetCurrentBoard(int8 fenSide,int8 fenBoard[])
-    fenSide 当前玩家方
-    fenBoard 当前棋盘
-    由fen串获取当前棋盘信息
-    */
-    void GetCurrentBoard(int8 fenSide, int8 fenBoard[])
-    {
-        playerSide = fenSide;
-        memcpy(currentBoard, fenBoard, 8 * 256);
-    }
+
     //初始化红黑双方子力值
     void InitValue()
     {
@@ -689,7 +685,7 @@ struct boardStruct
     //交换走子
     void ChangeSide()
     {
-        playerSide = 1 - playerSide;
+        playerSide = 1 ^ playerSide;
         zobr.Xor(Zobrist.Player, Player);
         openBookKey ^= Player;
     }
@@ -714,7 +710,7 @@ struct boardStruct
                         {
                             if (preMove.rookColPreMove[GETLINE(beginPos)][bitCol[GETCOL(beginPos)]][0] == GETLINE(kingPos))//空头炮
                             {
-                                redVal += HOLLOW_THREAT[GETLINE(beginPos)];
+                                redVal += vlHollowThreat[GETLINE(beginPos)];
                             }
                             else if (preMove.cannonSupCol[GETLINE(beginPos)][bitCol[GETCOL(beginPos)]][0] == GETLINE(kingPos) && (currentBoard[0x47] == SELF_SIDE(side) + KNIGHT_FROM || currentBoard[0x47] == SELF_SIDE(side) + KNIGHT_TO))//炮镇窝心马
                             {
@@ -735,7 +731,7 @@ struct boardStruct
                         {
                             if (preMove.cannonSupCol[GETLINE(beginPos)][bitCol[GETCOL(beginPos)]][0] == GETLINE(kingPos))//普通中炮
                             {
-                                redVal += (CENTRAL_THREAT[GETLINE(beginPos)] >> 1);
+                                redVal += (CENTRAL_THREAT[GETLINE(beginPos)] >> 2);
 
                                 //将门被控
                                 if (!currentBoard[0x36] && IsProtected(1 ^ side, 0x36))
@@ -763,7 +759,7 @@ struct boardStruct
                         else if (SAME_RANK(beginPos, kingPos))//沉底炮
                         {
                             if (preMove.rookLinePreMove[GETCOL(beginPos)][bitLine[GETLINE(beginPos)]][0] == GETCOL(kingPos)|| preMove.rookLinePreMove[GETCOL(beginPos)][bitLine[GETLINE(beginPos)]][1] == GETCOL(kingPos))
-                                redVal += BOTTOM_THREAT[GETCOL(beginPos)];
+                                redVal += vlBlackBottomThreat[GETCOL(beginPos)];
                         }
 
                     }
@@ -774,7 +770,7 @@ struct boardStruct
 
         }
         else if (currentPosition[OPPO_SIDE(side) + ROOK_FROM] && currentPosition[OPPO_SIDE(side) + ROOK_TO])//缺士怕双车
-            redVal += 40;
+            redVal += vlBlackAdvisorLeakage;
 
 
         side = 0;
@@ -794,7 +790,7 @@ struct boardStruct
                         {
                             if (preMove.rookColPreMove[GETLINE(beginPos)][bitCol[GETCOL(beginPos)]][1] >= GETLINE(kingPos))//空头炮
                             {
-                                blackVal += HOLLOW_THREAT[15-GETLINE(beginPos)];
+                                blackVal += vlHollowThreat[15-GETLINE(beginPos)];
                             }
                             else if (preMove.cannonSupCol[GETLINE(beginPos)][bitCol[GETCOL(beginPos)]][1] == GETLINE(kingPos) && (currentBoard[0xb7] == SELF_SIDE(side) + KNIGHT_FROM || currentBoard[0xb7] == SELF_SIDE(side) + KNIGHT_TO))//炮镇窝心马
                             {
@@ -815,7 +811,7 @@ struct boardStruct
                         {
                             if (preMove.cannonSupCol[GETLINE(beginPos)][bitCol[GETCOL(beginPos)]][1] == GETLINE(kingPos))//普通中炮
                             {
-                                blackVal += (CENTRAL_THREAT[15-GETLINE(beginPos)] >> 1);
+                                blackVal += (CENTRAL_THREAT[15-GETLINE(beginPos)] >> 2);
 
                                 //将门被控
                                 if (!currentBoard[0xc6] && IsProtected(1 ^ side, 0xc6))
@@ -843,7 +839,7 @@ struct boardStruct
                         else if (SAME_RANK(beginPos, kingPos))//沉底炮
                         {
                             if (preMove.rookLinePreMove[GETCOL(beginPos)][bitLine[GETLINE(beginPos)]][0] == GETCOL(kingPos)|| preMove.rookLinePreMove[GETCOL(beginPos)][bitLine[GETLINE(beginPos)]][1] == GETCOL(kingPos))
-                                blackVal += BOTTOM_THREAT[GETCOL(beginPos)];
+                                blackVal += vlRedBottomThreat[GETCOL(beginPos)];
                         }
 
                     }
@@ -854,9 +850,9 @@ struct boardStruct
 
         }
         else if (currentPosition[OPPO_SIDE(side) + ROOK_FROM] && currentPosition[OPPO_SIDE(side) + ROOK_TO])//缺士怕双车
-            blackVal += 40;
+            blackVal += vlRedAdvisorLeakage;
 
-        return playerSide == 0 ? redVal - blackVal : blackVal - redVal;
+        return playerSide == 0 ? (redVal - blackVal) : (blackVal - redVal);
     }
     //车的灵活性
     int RookMobility()
@@ -874,30 +870,30 @@ struct boardStruct
                 int col = preMove.rookLinePreMove[GETCOL(src)][bitLine[GETLINE(src)]][1];
                 if (!(currentBoard[GetOrder(GETLINE(src), col)] & SELF_SIDE(side)))
                     rookMob[side]++;
-                rookMob[side] += col - GETCOL(src);
+                rookMob[side] += col - GETCOL(src)-1;
 
                 //左
                 col = preMove.rookLinePreMove[GETCOL(src)][bitLine[GETLINE(src)]][0];
                 if (!(currentBoard[GetOrder(GETLINE(src), col)] & SELF_SIDE(side)))
                     rookMob[side]++;
-                rookMob[side] += GETCOL(src) - col;
+                rookMob[side] += GETCOL(src) - col-1;
 
                 //下
                 int line = preMove.rookColPreMove[GETLINE(src)][bitCol[GETCOL(src)]][1];
                 if (!(currentBoard[GetOrder(line, GETCOL(src))] & SELF_SIDE(side)))
                     rookMob[side]++;
-                rookMob[side] += line - GETLINE(src);
+                rookMob[side] += line - GETLINE(src)-1;
 
                 //上
                 line = preMove.rookColPreMove[GETLINE(src)][bitCol[GETCOL(src)]][0];
                 if (!(currentBoard[GetOrder(line, GETCOL(src))] & SELF_SIDE(side)))
                     rookMob[side]++;
-                rookMob[side] += GETLINE(src) - line;
+                rookMob[side] += GETLINE(src) - line-1;
             }
         }
         //std::cout << "rookMobility_red：" << rookMob[0] << " ";
         //std::cout << "black:" << rookMob[1] << '\n';
-        return playerSide == 0 ? rookMob[0] - rookMob[1] : rookMob[1] - rookMob[0];
+        return (playerSide == 0 ? (rookMob[0] - rookMob[1]) : (rookMob[1] - rookMob[0])) >> 1;
     }
     int KnightBlock()
     {
@@ -915,25 +911,25 @@ struct boardStruct
                     int dst = preMove.knightPreMove[j][src];
                     if (!currentBoard[preMove.knightLeg[j][src]] &&   //不会蹩马腿
                         !N_BAD_SQUARES[dst] && !(currentBoard[dst] & SELF_SIDE(side)) &&  //目标位置不是己方棋子且目标位置不是不利位置
-                        !IsProtected(1 - side, dst))   //目标位置没有被对方的棋子守护
+                        !IsProtected(1 ^ side, dst))   //目标位置没有被对方的棋子守护
                         if ((++count) > 1)//已经搜到了大于一个的好走法，可以退出
                             break;
                 }
                 knightPenalty[side] += (count == 0 ? 10 : (count == 1 ? 5 : 0));
             }
         }
-        return playerSide == 0 ? -knightPenalty[0] + knightPenalty[1] : -knightPenalty[1] + knightPenalty[0];
+        return playerSide == 0 ?( -knightPenalty[0] + knightPenalty[1] ):( -knightPenalty[1] + knightPenalty[0]);
     }
     int Evaluate(void)
     {
-        return (playerSide == 0 ? redVal - blackVal : blackVal - redVal) + vlAdvanced;/*ADVANCED_VALUE+KnightBlock()+RookMobility()+ SpeacialShape()*/;
+        return (playerSide == 0 ? (redVal - blackVal) : (blackVal - redVal)) + vlAdvanced + SpeacialShape() + RookMobility() + KnightBlock();/*ADVANCED_VALUE+KnightBlock()+RookMobility()+ SpeacialShape()*/
     }
 
     /*
     void DelPiece(int32 pos,int32 chessPiece)
     移除一个棋子 pos为移除棋子位置，chhessPiece为移除棋子编号
     */
-    void DelPiece(int pos, int chessPiece)
+    void DelPiece(int32 pos, int32 chessPiece)
     {
         currentBoard[pos] = 0;
         currentPosition[chessPiece] = 0;
@@ -947,7 +943,7 @@ struct boardStruct
         if (chessPiece < 32)
         {
             //redVal -= cucvlPiecePos[pieceType][pos];
-            redVal -= pieceValueTable[pieceType][pos];
+            redVal -= redValueTable[pieceType][pos];
             zobr.Xor(Zobrist.Table[pieceType][pos], Table[pieceType][pos]);
             if (openBookFlag)
                 openBookKey ^= Table[pieceType][pos - ((pos & 15) << 1) + 14];
@@ -955,7 +951,7 @@ struct boardStruct
         else
         {
             //blackVal -= cucvlPiecePos[pieceType][SQUARE_FLIP(pos)];//取值颠倒
-            blackVal -= pieceValueTable[pieceType][SQUARE_FLIP(pos)];//取值颠倒
+            blackVal -= blackValueTable[pieceType][pos];//取值颠倒
             zobr.Xor(Zobrist.Table[pieceType + 7][pos], Table[pieceType + 7][pos]);
             if (openBookFlag)
                 openBookKey ^= Table[pieceType + 7][pos - ((pos & 15) << 1) + 14];
@@ -966,7 +962,7 @@ struct boardStruct
     void AddPiece(int32 pos,int32 chessPiece)
     增加一个棋子 pos为增加棋子位置，chhessPiece为增加棋子编号
     */
-    void AddPiece(int pos, int chessPiece)
+    void AddPiece(int32 pos, int32 chessPiece)
     {
         currentBoard[pos] = chessPiece;
         currentPosition[chessPiece] = pos;
@@ -980,7 +976,7 @@ struct boardStruct
         if (chessPiece < 32)
         {
             //redVal += cucvlPiecePos[pieceType][pos];
-            redVal += pieceValueTable[pieceType][pos];
+            redVal += redValueTable[pieceType][pos];
             zobr.Xor(Zobrist.Table[pieceType][pos], Table[pieceType][pos]);
             if (openBookFlag)
                 openBookKey ^= Table[pieceType][pos-((pos&15)<<1)+14];
@@ -988,7 +984,7 @@ struct boardStruct
         else
         {
             //blackVal += cucvlPiecePos[pieceType][SQUARE_FLIP(pos)];//取值颠倒
-            blackVal += pieceValueTable[pieceType][SQUARE_FLIP(pos)];//取值颠倒
+            blackVal += blackValueTable[pieceType][pos];//取值颠倒
             zobr.Xor(Zobrist.Table[pieceType + 7][pos], Table[pieceType + 7][pos]);
             if (openBookFlag)
                 openBookKey ^= Table[pieceType+7][pos  - ((pos & 15)<<1)+ 14];
@@ -1197,7 +1193,7 @@ struct boardStruct
         return (nowDepth & 1) == 0 ? -DRAW_VALUE : DRAW_VALUE;
     }
     //合理着法判断
-    bool LegalMove(int mv) const 
+    bool LegalMove(int32 mv) const 
     {
         int beginPos, endPos;
         int selfSide, chessPieceFrom,chessPieceTo;

@@ -16,12 +16,12 @@ const int HASH_PV = 3;
 //单置换表的置换表结构
 struct HashStruct
 {
-    uint32_t dwLock0;           // Zobrist校验锁，第一部分
-    uint16_t wmv;                      //最佳着法
-    uint8_t depth;                     //深度
-    uint8_t flag;                     //标志
-    int16_t svl;                      //分值
-    uint32_t dwLock1;           // Zobrist校验锁，第二部分
+    uint32 dwLock0;           // Zobrist校验锁，第一部分
+    int32 wmv;                      //最佳着法
+    int32 depth;                     //深度
+    int32 flag;                     //标志
+    int32 svl;                      //分值
+    uint32 dwLock1;           // Zobrist校验锁，第二部分
 }; 
 HashStruct hshItems[nHashMask];          // 置换表
 void ClearHash(void) // 清空置换表
@@ -75,7 +75,7 @@ int ValueAdjust(bool& bBanNode, bool& bMateNode, int vl)
 
 //单置换
 //提取置换表项
-int LookUpHash(int Alpha, int Beta, int nDepth, int& mv)
+int LookUpHash(int32 Alpha, int32 Beta, int32 nDepth, int32& mv)
 {
     HashStruct hsh;
     int vl;
@@ -105,7 +105,7 @@ int LookUpHash(int Alpha, int Beta, int nDepth, int& mv)
 }
 
 //保存置换表项
-void StoreHash(int flag, int mv, int vl, int nDepth)
+void StoreHash(int32 flag, int32 mv, int32 vl, int32 nDepth)
 {
     HashStruct hsh = hshItems[(board.zobr.dwKey) & (nHashMask - 1)];
     if (nDepth < hsh.depth) // 深度优先

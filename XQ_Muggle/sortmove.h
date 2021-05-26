@@ -6,7 +6,7 @@
 #include "board.h"
 
 extern boardStruct board;
-extern uint16 wmvKiller[LIMIT_DEPTH][2];
+extern int32 wmvKiller[LIMIT_DEPTH][2];
 
 const int HASHMOVE = 0;
 const int KILLER1 = 1;
@@ -21,13 +21,13 @@ static int cucMvvLva[16] =
 {
   5,1,1,1,1,3,3,4,4,3,3,2,2,2,2,2
 };
-// ÇóMVV/LVAÖµ
+// ï¿½ï¿½MVV/LVAÖµ
 inline int MvvLva(int Move) 
 {
 	return (cucMvvLva[board.currentBoard[GETEND(Move)]] &15) - cucMvvLva[board.currentBoard[GETBEGIN(Move)]&15];
 }
 
-// "sort"°´MVV/LVAÖµÅÅÐòµÄ±È½Ïº¯Êý
+// "sort"ï¿½ï¿½MVV/LVAÖµï¿½ï¿½ï¿½ï¿½Ä±È½Ïºï¿½ï¿½ï¿?
 static bool CompareMvvLva(const int a, const int b) 
 {
 	return MvvLva(a) > MvvLva(b);
@@ -45,7 +45,7 @@ inline int SortMove(int* Moves,int kind,bool capture=0)
 	return numOfMoves;
 }	
 
-// Çå¿ÕÉ±ÊÖ×Å·¨±í
+// ï¿½ï¿½ï¿½É±ï¿½ï¿½ï¿½Å·ï¿½ï¿½ï¿?
 inline void ClearKiller()
 {
 	memset(wmvKiller, 0,sizeof(wmvKiller));
@@ -53,20 +53,20 @@ inline void ClearKiller()
 
 struct sortMoveStruct 
 {
-	int moveHash,mvKiller1, mvKiller2; // Á½¸öÉ±ÊÖ×ß·¨
-	int nPhase, nIndex, numOfMoves;    // µ±Ç°½×¶Î£¬µ±Ç°²ÉÓÃµÚ¼¸¸ö×ß·¨£¬×Ü¹²ÓÐ¼¸¸ö×ß·¨
-	int Moves[MAX_MOVES];           // ËùÓÐµÄ×ß·¨
+	int moveHash,mvKiller1, mvKiller2; // ï¿½ï¿½ï¿½ï¿½É±ï¿½ï¿½ï¿½ß·ï¿½
+	int nPhase, nIndex, numOfMoves;    // ï¿½ï¿½Ç°ï¿½×¶Î£ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ÃµÚ¼ï¿½ï¿½ï¿½ï¿½ß·ï¿½ï¿½ï¿½ï¿½Ü¹ï¿½ï¿½Ð¼ï¿½ï¿½ï¿½ï¿½ß·ï¿½
+	int Moves[MAX_MOVES];           // ï¿½ï¿½ï¿½Ðµï¿½ï¿½ß·ï¿½
 	void Init()
-	{ // ³õÊ¼»¯£¬Éè¶¨ÖÃ»»±í×ß·¨ºÍÁ½¸öÉ±ÊÖ×ß·¨
+	{ // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½è¶¨ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ß·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É±ï¿½ï¿½ï¿½ß·ï¿½
 		moveHash = board.moveHash[board.nowDepth];
 		mvKiller1 = wmvKiller[board.nowDepth][0];
 		mvKiller2 = wmvKiller[board.nowDepth][1];
 		nPhase = HASHMOVE;
 	}
-	int Next(); // µÃµ½ÏÂÒ»¸ö×ß·¨
+	int Next(); // ï¿½Ãµï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ß·ï¿½
 };
 
-// µÃµ½ÏÂÒ»¸ö×ß·¨
+// ï¿½Ãµï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ß·ï¿½
 int sortMoveStruct::Next() 
 {
 	int move;
@@ -113,8 +113,8 @@ int sortMoveStruct::Next()
 }
 
 
-// ¶Ô×î¼Ñ×ß·¨µÄ´¦Àí
-inline void SetBestMove(int mv, int nDepth, uint16* lpwmvKiller) 
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß·ï¿½ï¿½Ä´ï¿½ï¿½ï¿?
+inline void SetBestMove(int mv, int nDepth, int32* lpwmvKiller) 
 {
 	board.historyTable[mv] += nDepth * nDepth;
 	if (lpwmvKiller[0] != mv) 
