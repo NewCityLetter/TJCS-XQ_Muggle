@@ -1,12 +1,9 @@
-#define _CRT_SECURE_NO_WARNINGS
+//#define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
 #include <cstring>
 #include <cstdint>
+#include <fstream>
 #include "ucci.h"
-#include "log.h"
-
-
-using namespace std;
 
 
 static char chFen[maxInputLen];//ÔÝÊ±´¢´æ
@@ -74,7 +71,7 @@ static bool AnalyPositCom(char* strP, UcciComPositStruct& UcciComPosit)
 ucciComEnum BootCom()
 {
 	char readStr[maxInputLen];
-	cin.getline(readStr, maxInputLen);
+	std::cin.getline(readStr, maxInputLen);
 	if (MyStrcasencmp(readStr, "ucci", 4) == 0) {
 		return comUcci;
 	}
@@ -97,10 +94,9 @@ ucciComEnum IdleCom(UcciComPositStruct& UcciComPosit)
 {
 	char readStr[maxInputLen];
 	char* strP;
-	cin.getline(readStr, maxInputLen);
+	std::cin.getline(readStr, maxInputLen);
 
 	strP = readStr;
-	a.error(strP);
 
 	if (MyStrcasencmp(strP, "isready", 7) == 0)
 	{
@@ -108,6 +104,15 @@ ucciComEnum IdleCom(UcciComPositStruct& UcciComPosit)
 	}
 	else if (MyStrcasencmp(strP, "position", 8) == 0)
 	{
+		/*cin.ignore(100);
+		std::ofstream out;
+		out.open("log.txt", std::ios::out | std::ios::binary | std::ios::ate | std::ios::app);
+		if (out.is_open())
+		{
+			
+			out << "position: " << strP << std::endl;
+			out.close();
+		}*/
 		strP += strlen("position");
 		if (AnalyPositCom(strP, UcciComPosit))
 		{

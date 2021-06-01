@@ -33,6 +33,12 @@ extern bool openBookFlag;
 extern uint64_t openBookKey;
 extern int historyTable[65536];
 
+#ifdef DEBUG
+extern int nodeNum;
+extern bool debugflag;
+#endif
+
+
 inline int MAX(int a,int b)
 {
 	return a>b?a:b;

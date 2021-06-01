@@ -1,19 +1,20 @@
-ï»¿#ifndef BOARD_H
+#ifndef BOARD_H
 #define BOARD_H
 #pragma once
 
 #include "base.h"
 #include "zobrist.h"
 #include "premove.h"
-extern int vlAdvanced;                      //å…ˆè¡Œæƒå› ç´ çš„åˆ†å€¼
-extern int redValueTable[7][256];        //è®¡ç®—å‡ºçš„å­åŠ›ä»·å€¼è¡¨
-extern int blackValueTable[7][256];        //è®¡ç®—å‡ºçš„å­åŠ›ä»·å€¼è¡¨
-extern int vlHollowThreat[16];//ç©ºå¤´ç‚®å¨èƒåˆ†å€¼
-extern int vlRedBottomThreat[16];//æ²‰åº•ç‚®å¨èƒåˆ†å€¼
-extern int vlBlackBottomThreat[16];
-extern int vlBlackAdvisorLeakage;//ç¼ºå£«æ€•åŒè½¦çš„ç½šåˆ†
-extern int vlRedAdvisorLeakage;
-//FROMä¸ºèµ·å§‹ç¼–å· TOä¸ºç»“æŸç¼–å·
+
+extern int AdvancedVal;                      //ÏÈĞĞÈ¨ÒòËØµÄ·ÖÖµ
+extern int redValueTable[7][256];        //¼ÆËã³öµÄ×ÓÁ¦¼ÛÖµ±í
+extern int blackValueTable[7][256];        //¼ÆËã³öµÄ×ÓÁ¦¼ÛÖµ±í
+extern int HollowThreatVal[16];//¿ÕÍ·ÅÚÍşĞ²·ÖÖµ
+extern int RedBottomThreatVal[16];//³Áµ×ÅÚÍşĞ²·ÖÖµ
+extern int BlackBottomThreatVal[16];
+extern int BlackAdvisorLeakageVal;//È±Ê¿ÅÂË«³µµÄ·£·Ö
+extern int RedAdvisorLeakageVal;
+//FROMÎªÆğÊ¼±àºÅ TOÎª½áÊø±àºÅ
 const int32 KING_FROM = 0;
 const int32 ADVISOR_FROM = 1;
 const int32 ADVISOR_TO = 2;
@@ -36,8 +37,13 @@ const int32 ROOK = 4;
 const int32 CANNON = 5;
 const int32 PAWN = 6;
 
-// åˆ¤æ–­æ£‹å­æ˜¯å¦åœ¨æ£‹ç›˜ä¸­çš„æ•°ç»„
-static const bool ccInBoard[256] = {
+const int EVALUATE_LEVEL_1 = 160;
+const int EVALUATE_LEVEL_2 = 80;
+const int EVALUATE_LEVEL_3 = 40;
+const int EVALUATE_LEVEL_4 = 20;
+
+// ÅĞ¶ÏÆå×ÓÊÇ·ñÔÚÆåÅÌÖĞµÄÊı×é
+static const bool InBoard[256] = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -56,8 +62,8 @@ static const bool ccInBoard[256] = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-// åˆ¤æ–­æ£‹å­æ˜¯å¦åœ¨ä¹å®«çš„æ•°ç»„
-static const bool ccInFort[256] = {
+// ÅĞ¶ÏÆå×ÓÊÇ·ñÔÚ¾Å¹¬µÄÊı×é
+static const bool InFort[256] = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -77,161 +83,26 @@ static const bool ccInFort[256] = {
 };
 
 
-/* å¸…(å°†)çš„æ­¥é•¿*/
-static const int32 ccKingDelta[4] = { -16, -1, 1, 16 };
+/* Ë§(½«)µÄ²½³¤*/
+static const int32 KingDelta[4] = { -16, -1, 1, 16 };
 
-/*ä»•(å£«)çš„æ­¥é•¿(ç§»åŠ¨ä¸¤æ¬¡å½“åšç›¸ç§»åŠ¨ä¸€æ¬¡ï¼Œå‡å°‘ä¸€ä¸ªæ•°ç»„)*/
-static const int32 ccAdvisorDelta[4] = { -17, -15, 15, 17 };
+/*ÊË(Ê¿)µÄ²½³¤(ÒÆ¶¯Á½´Îµ±×öÏàÒÆ¶¯Ò»´Î£¬¼õÉÙÒ»¸öÊı×é)*/
+static const int32 AdvisorDelta[4] = { -17, -15, 15, 17 };
 
-/*é©¬çš„æ­¥é•¿ï¼Œä»¥å¸…(å°†)çš„æ­¥é•¿ä½œä¸ºé©¬è…¿*/
-static const int32 ccKnightDelta[4][2] = { {-33, -31}, {-18, 14}, {-14, 18}, {31, 33} };
+/*ÂíµÄ²½³¤£¬ÒÔË§(½«)µÄ²½³¤×÷ÎªÂíÍÈ*/
+static const int32 KnightDelta[4][2] = { {-33, -31}, {-18, 14}, {-14, 18}, {31, 33} };
 
-/*é©¬è¢«å°†å†›çš„æ­¥é•¿ï¼Œä»¥ä»•(å£«)çš„æ­¥é•¿ä½œä¸ºé©¬è…¿*/
-static const int32 ccKnightCheckDelta[4][2] = { {-33, -18}, {-31, -14}, {14, 31}, {18, 33} };
+/*Âí±»½«¾üµÄ²½³¤£¬ÒÔÊË(Ê¿)µÄ²½³¤×÷ÎªÂíÍÈ*/
+static const int32 KnightCheckDelta[4][2] = { {-33, -18}, {-31, -14}, {14, 31}, {18, 33} };
 
-// å­åŠ›ä½ç½®ä»·å€¼è¡¨
-static const int32 cucvlPiecePos[7][256] = {
-  {// å¸…(å°†)
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  2,  2,  2,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0, 11, 15, 11,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
-  }, { // ä»•(å£«)
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0, 20,  0, 20,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0, 23,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0, 20,  0, 20,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
-  }, { // ç›¸(è±¡)
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0, 20,  0,  0,  0, 20,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0, 18,  0,  0,  0, 23,  0,  0,  0, 18,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0, 20,  0,  0,  0, 20,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
-  }, { // é©¬
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0, 90, 90, 90, 96, 90, 96, 90, 90, 90,  0,  0,  0,  0,
-    0,  0,  0, 90, 96,103, 97, 94, 97,103, 96, 90,  0,  0,  0,  0,
-    0,  0,  0, 92, 98, 99,103, 99,103, 99, 98, 92,  0,  0,  0,  0,
-    0,  0,  0, 93,108,100,107,100,107,100,108, 93,  0,  0,  0,  0,
-    0,  0,  0, 90,100, 99,103,104,103, 99,100, 90,  0,  0,  0,  0,
-    0,  0,  0, 90, 98,101,102,103,102,101, 98, 90,  0,  0,  0,  0,
-    0,  0,  0, 92, 94, 98, 95, 98, 95, 98, 94, 92,  0,  0,  0,  0,
-    0,  0,  0, 93, 92, 94, 95, 92, 95, 94, 92, 93,  0,  0,  0,  0,
-    0,  0,  0, 85, 90, 92, 93, 78, 93, 92, 90, 85,  0,  0,  0,  0,
-    0,  0,  0, 88, 85, 90, 88, 90, 88, 90, 85, 88,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
-  }, { // è½¦
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,206,208,207,213,214,213,207,208,206,  0,  0,  0,  0,
-    0,  0,  0,206,212,209,216,233,216,209,212,206,  0,  0,  0,  0,
-    0,  0,  0,206,208,207,214,216,214,207,208,206,  0,  0,  0,  0,
-    0,  0,  0,206,213,213,216,216,216,213,213,206,  0,  0,  0,  0,
-    0,  0,  0,208,211,211,214,215,214,211,211,208,  0,  0,  0,  0,
-    0,  0,  0,208,212,212,214,215,214,212,212,208,  0,  0,  0,  0,
-    0,  0,  0,204,209,204,212,214,212,204,209,204,  0,  0,  0,  0,
-    0,  0,  0,198,208,204,212,212,212,204,208,198,  0,  0,  0,  0,
-    0,  0,  0,200,208,206,212,200,212,206,208,200,  0,  0,  0,  0,
-    0,  0,  0,194,206,204,212,200,212,204,206,194,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
-  }, { // ç‚®
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,100,100, 96, 91, 90, 91, 96,100,100,  0,  0,  0,  0,
-    0,  0,  0, 98, 98, 96, 92, 89, 92, 96, 98, 98,  0,  0,  0,  0,
-    0,  0,  0, 97, 97, 96, 91, 92, 91, 96, 97, 97,  0,  0,  0,  0,
-    0,  0,  0, 96, 99, 99, 98,100, 98, 99, 99, 96,  0,  0,  0,  0,
-    0,  0,  0, 96, 96, 96, 96,100, 96, 96, 96, 96,  0,  0,  0,  0,
-    0,  0,  0, 95, 96, 99, 96,100, 96, 99, 96, 95,  0,  0,  0,  0,
-    0,  0,  0, 96, 96, 96, 96, 96, 96, 96, 96, 96,  0,  0,  0,  0,
-    0,  0,  0, 97, 96,100, 99,101, 99,100, 96, 97,  0,  0,  0,  0,
-    0,  0,  0, 96, 97, 98, 98, 98, 98, 98, 97, 96,  0,  0,  0,  0,
-    0,  0,  0, 96, 96, 97, 99, 99, 99, 97, 96, 96,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
-  }, { // å…µ(å’)
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  9,  9,  9, 11, 13, 11,  9,  9,  9,  0,  0,  0,  0,
-    0,  0,  0, 19, 24, 34, 42, 44, 42, 34, 24, 19,  0,  0,  0,  0,
-    0,  0,  0, 19, 24, 32, 37, 37, 37, 32, 24, 19,  0,  0,  0,  0,
-    0,  0,  0, 19, 23, 27, 29, 30, 29, 27, 23, 19,  0,  0,  0,  0,
-    0,  0,  0, 14, 18, 20, 27, 29, 27, 20, 18, 14,  0,  0,  0,  0,
-    0,  0,  0,  7,  0, 13,  0, 16,  0, 13,  0,  7,  0,  0,  0,  0,
-    0,  0,  0,  7,  0,  7,  0, 15,  0,  7,  0,  7,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
-  }
-};
-
-// ç©ºå¤´ç‚®å¨èƒåˆ†å€¼ï¼Œè¡Œå· 0-16
-const int32 HOLLOW_THREAT[16] =
-{
-    0,  0,  0,  0,  0,  0, 60, 65, 70, 75, 80, 80, 80,  0,  0,  0
-};
-
-// ç‚®é•‡çªå¿ƒé©¬çš„å¨èƒåˆ†å€¼ï¼Œè¡Œå· 0-16 æˆ–ä¸€èˆ¬ä¸­ç‚®å¨èƒ
+// ÅÚÕòÎÑĞÄÂíµÄÍşĞ²·ÖÖµ£¬ĞĞºÅ 0-16 »òÒ»°ãÖĞÅÚÍşĞ²
 const int32 CENTRAL_THREAT[16] = 
 {
     0,  0,  0,  0,  0,  0, 50, 45, 40, 35, 30, 30, 30,  0,  0,  0
 };
 
-//æ²‰åº•ç‚®çš„å¨èƒåˆ†å€¼ åˆ—å· 0-16
-const int32 BOTTOM_THREAT[16] = 
-{
-    0,  0,  0, 40, 30,  0,  0,  0,  0,  0, 30, 40,  0,  0,  0,  0
-};
-// ä¸åˆ©äºé©¬çš„ä½ç½®
-const int32 N_BAD_SQUARES[256] = {
+// ²»ÀûÓÚÂíµÄÎ»ÖÃ
+const int32 KnigntBadPos[256] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -250,8 +121,8 @@ const int32 N_BAD_SQUARES[256] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-/* æ£‹å­åºå·å¯¹åº”çš„æ£‹å­ç±»å‹
-   æ¯æ–¹çš„æ£‹å­é¡ºåºä¾æ¬¡æ˜¯ï¼šå¸…ä»•ä»•ç›¸ç›¸é©¬é©¬è½¦è½¦ç‚®ç‚®å…µå…µå…µå…µå…µ(å°†å£«å£«è±¡è±¡é©¬é©¬è½¦è½¦ç‚®ç‚®å’å’å’å’å’)
+/* Æå×ÓĞòºÅ¶ÔÓ¦µÄÆå×ÓÀàĞÍ
+   Ã¿·½µÄÆå×ÓË³ĞòÒÀ´ÎÊÇ£ºË§ÊËÊËÏàÏàÂíÂí³µ³µÅÚÅÚ±ø±ø±ø±ø±ø(½«Ê¿Ê¿ÏóÏóÂíÂí³µ³µÅÚÅÚ×ä×ä×ä×ä×ä)
  */
 static const int32 pieceTypes[48] = 
 {
@@ -260,72 +131,118 @@ static const int32 pieceTypes[48] =
   0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 6, 6, 6
 };
 
-//è·å–å·±æ–¹æ£‹å­å¼‚æˆ–ä¿¡æ¯
+// ³£Êı±í"ValuableStringPieces"ÓÃÅĞ¶ÏÇ£ÖÆÊÇ·ñÓĞ¼ÛÖµ
+// ´óÓÚ0µÄÏîÊÇ¶ÔÓÚ³µÀ´ËµµÄ£¬Ç£ÖÆÂíºÍÅÚ(±»Ç£ÖÆ)¶¼ÓĞ¼ÛÖµ£¬´óÓÚ1µÄÏîÊÇ¶ÔÓÚÅÚÀ´ËµÖ»ÓĞÇ£ÖÆÂí²ÅÓĞ¼ÛÖµ
+static const int ValuableStringPieces[48] = {
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 2, 2, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 2, 2, 0, 0, 1, 1, 0, 0, 0, 0, 0
+};
+
+// "StringValueTabVal"ÊÇÀàËÆ"KNIGHT_PIN_TAB"µÄ³£Êı±í(²ÎÔÄ"pregen.h")£¬¾ö¶¨Ç£ÖÆ¼ÛÖµ
+// ÖĞ¼ä×ÓºÍ±»Ç£ÖÆ×ÓµÄ¾àÀëÔ½½ü£¬Ç£ÖÆµÄ¼ÛÖµ¾ÍÔ½´ó
+static const char StringValueTabVal[512] = {
+                               0,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0, 12,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0, 16,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0, 20,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0, 24,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0, 28,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0, 32,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0, 36,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0, 40,  0,  0,  0,  0,  0,  0,  0,  0,
+  12, 16, 20, 24, 28, 32, 36,  0, 36, 32, 28, 24, 20, 16, 12,  0,
+   0,  0,  0,  0,  0,  0,  0, 40,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0, 36,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0, 32,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0, 28,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0, 24,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0, 20,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0, 16,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0, 12,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0
+};
+
+//»ñÈ¡¼º·½Æå×ÓÒì»òĞÅÏ¢
 inline int32 SELF_SIDE(int32 sidePlayer)
 {
     return 16 + (sidePlayer << 4);
 }
-//è·å–å¯¹æ–¹æ£‹å­å¼‚æˆ–ä¿¡æ¯
+//»ñÈ¡¶Ô·½Æå×ÓÒì»òĞÅÏ¢
 inline int32 OPPO_SIDE(int32 sidePlayer)
 {
     return 32 - (sidePlayer << 4);
 }
-//è·å–å½“å‰æ£‹å­ç±»å‹
+//»ñÈ¡µ±Ç°Æå×ÓÀàĞÍ
 inline int32 PIECE_INDEX(int32 chessPiece)
 {
     return chessPiece & 15;
 }
-// åˆ¤æ–­æ£‹å­æ˜¯å¦åœ¨ä¹å®«ä¸­
+// ÅĞ¶ÏÆå×ÓÊÇ·ñÔÚ¾Å¹¬ÖĞ
 inline bool IN_FORT(int32 pos)
 {
-    return ccInFort[pos];
+    return InFort[pos];
 }
-// åˆ¤æ–­æ£‹å­æ˜¯å¦åœ¨æ£‹ç›˜ä¸­
+// ÅĞ¶ÏÆå×ÓÊÇ·ñÔÚÆåÅÌÖĞ
 inline bool IN_BOARD(int32 pos)
 {
-    return ccInBoard[pos];
+    return InBoard[pos];
 }
-//å‘å‰ç§»åŠ¨ä¸€æ­¥
+//ÏòÇ°ÒÆ¶¯Ò»²½
 inline int32 SQUARE_FORWARD(int32 position, int32 sidePlayer)
 {
     return position - 16 + (sidePlayer << 5);
 }
-// æ˜¯å¦æœªè¿‡æ²³
+// ÊÇ·ñÎ´¹ıºÓ
 inline bool HOME_HALF(int32 position, int32 sidePlayer)
 {
     return (position & 0x80) != (sidePlayer << 7);
 }
-// æ˜¯å¦å·²è¿‡æ²³
+// ÊÇ·ñÒÑ¹ıºÓ
 inline bool AWAY_HALF(int32 position, int32 sidePlayer)
 {
     return (position & 0x80) == (sidePlayer << 7);
 }
-//ç”±RecordMoveè·å¾—èµ·ç‚¹åæ ‡
+//ÓÉRecordMove»ñµÃÆğµã×ø±ê
 inline int32 GETBEGIN(int32 Move)
 {
     return Move & 255;
 }
-//ç”±RecordMoveè·å¾—ç»ˆç‚¹åæ ‡
+//ÓÉRecordMove»ñµÃÖÕµã×ø±ê
 inline int32 GETEND(int32 Move)
 {
     return Move >> 8;
 }
-//åˆ¤æ–­é»‘æ–¹è¿˜æ˜¯çº¢æ–¹ï¼Œé»‘æ–¹è¿”å›1ï¼Œçº¢æ–¹è¿”å›0
+//ÅĞ¶ÏÆå×ÓÀàĞÍ
 inline int32 GETTYPE(int32 chessPiece)
 {
     return pieceTypes[chessPiece];
 }
-//ç»ˆç‚¹æ”¾åœ¨å·¦å…«ä½ï¼Œèµ·ç‚¹æ”¾åœ¨å³å…«ä½
+//ÖÕµã·ÅÔÚ×ó°ËÎ»£¬Æğµã·ÅÔÚÓÒ°ËÎ»
 inline int32 RecordMove(int32 beginPos, int32 endPos)
 {
     return beginPos + (endPos << 8);
 }
-//è·å–å½“å‰åæ ‡ç¼–å·
+//»ñÈ¡µ±Ç°×ø±ê±àºÅ
 inline int32 GetOrder(int32 line, int32 col)
 {
     return (line << 4) + col;
 }
-//ç¿»è½¬æ ¼å­
+//·­×ª¸ñ×Ó
 inline int32 SQUARE_FLIP(int32 pos) 
 {
     return 254 - pos;
@@ -336,12 +253,12 @@ inline bool SAME_HALF(int32 beginPos, int32 endPos)
   return ((beginPos ^ endPos) & 0x80) == 0;
 }
 
-//æ ¹æ®sqè¿”å›è¡Œæ•°0 ~ 16
+//¸ù¾İsq·µ»ØĞĞÊı0 ~ 16
 inline int32 GETLINE(int32 sq) {
     return sq >> 4;
 }
 
-//æ ¹æ®sqè¿”å›åˆ—æ•°0 ~ 16
+//¸ù¾İsq·µ»ØÁĞÊı0 ~ 16
 inline int32 GETCOL(int32 sq) {
     return sq & 15;
 }
@@ -349,26 +266,30 @@ inline int32 GETCOL(int32 sq) {
 
 /********************************************************/
 
-//åŒè¡Œ
-inline bool SAME_RANK(int32 sqSrc, int32 sqDst) 
+//Í¬ĞĞ
+inline bool SAME_RANK(int32 beginPos, int32 endPos) 
 {
-    return ((sqSrc ^ sqDst) & 0xf0) == 0;
+    return ((beginPos ^ endPos) & 0xf0) == 0;
 }
 
-//åŒåˆ—
-inline bool SAME_FILE(int32 sqSrc, int32 sqDst) 
+//Í¬ÁĞ
+inline bool SAME_FILE(int32 beginPos, int32 endPos)
 {
-    return ((sqSrc ^ sqDst) & 0x0f) == 0;
+    return ((beginPos ^ endPos) & 0x0f) == 0;
 }
 /*****************************************************/
+static int MvvLvaVal[16] = 
+{
+  5,1,1,1,1,3,3,4,4,3,3,2,2,2,2,2
+};
 
 extern void ClearKiller();
 
-// å†å²èµ°æ³•ä¿¡æ¯
+// ÀúÊ·×ß·¨ĞÅÏ¢
 struct MoveStruct
 {
-    int32 wmv;//å‰å…«ä½endposï¼Œåå…«ä½beginpos
-    int32 ucpcCaptured;//captureä¸ºè¢«åƒå­ç¼–å·
+    int32 wmv;//Ç°°ËÎ»endpos£¬ºó°ËÎ»beginpos
+    int32 ucpcCaptured;//captureÎª±»³Ô×Ó±àºÅ
     bool ucbCheck;
     uint64 dwKey;//zobrist
 
@@ -381,27 +302,32 @@ struct MoveStruct
     }
 };
 
+struct SearchMove
+{
+    int move;
+    int val;
+};
+
 struct boardStruct
 {
-    int32 playerSide;//å½“å‰è¡Œèµ°æ–¹R0/B1
+    int32 playerSide;//µ±Ç°ĞĞ×ß·½R0/B1
     int32 currentBoard[256];
     /*
-    å½“å‰æ£‹ç›˜16*16 [3-12][3-11]ä¸ºæ£‹ç›˜
-    16-31  å¸…ä»•ä»•ç›¸ç›¸é©¬é©¬è½¦è½¦ç‚®ç‚®å…µå…µå…µå…µå…µ(R)
-    32-47  å°†å£«å£«è±¡è±¡é©¬é©¬è½¦è½¦ç‚®ç‚®å’å’å’å’å’(B)
-    0è¡¨ç¤ºæ— æ£‹å­
+    µ±Ç°ÆåÅÌ16*16 [3-12][3-11]ÎªÆåÅÌ
+    16-31  Ë§ÊËÊËÏàÏàÂíÂí³µ³µÅÚÅÚ±ø±ø±ø±ø±ø(R)
+    32-47  ½«Ê¿Ê¿ÏóÏóÂíÂí³µ³µÅÚÅÚ×ä×ä×ä×ä×ä(B)
+    0±íÊ¾ÎŞÆå×Ó
     */
-    int32  currentPosition[48];//æ¯ä¸ªæ£‹å­å½“å‰ä½ç½®ï¼Œ0è¡¨ç¤ºè¢«åƒ
-    int32 redVal, blackVal;//çº¢é»‘æ£‹å­çš„å­åŠ›ä»·å€¼
+    int32  currentPosition[48];//Ã¿¸öÆå×Óµ±Ç°Î»ÖÃ£¬0±íÊ¾±»³Ô
+    int32 redVal, blackVal;//ºìºÚÆå×ÓµÄ×ÓÁ¦¼ÛÖµ
     int32 bitLine[13],bitCol[12];
     int32 nowDepth, nowMoveNum;
-    int32 moveHash[LIMIT_DEPTH];
     int32 historyTable[65536];
-    MoveStruct mvsList[MAX_MOVES];//å†å²èµ°æ³•ä¿¡æ¯åˆ—è¡¨
+    MoveStruct mvsList[MAX_MOVES];//ÀúÊ·×ß·¨ĞÅÏ¢ÁĞ±í
     ZobristStruct zobr;// Zobrist
 
 
-    void ClearBoard()//æ£‹ç›˜åˆå§‹åŒ–
+    void ClearBoard()//ÆåÅÌ³õÊ¼»¯
     {
         openBookKey = 0;
         playerSide = 0;
@@ -412,7 +338,6 @@ struct boardStruct
         ClearKiller();
         memset(bitCol,0,sizeof(bitCol));
         memset(bitLine,0,sizeof(bitLine));
-        memset(moveHash, 0, sizeof(moveHash));
         memset(historyTable, 0, sizeof(historyTable));
         memset(currentBoard, 0, sizeof(currentBoard));
         memset(currentPosition, 0, sizeof(currentPosition));
@@ -422,7 +347,7 @@ struct boardStruct
     {
         historyTable[move] += depth * depth;
     }
-    //è·å–å½“å‰currentPositionæ•°ç»„
+    //»ñÈ¡µ±Ç°currentPositionÊı×é
     void GetCurrentPosition()
     {
         for (int line = 0x3; line <= 0xc; line++)
@@ -438,8 +363,9 @@ struct boardStruct
             }
         }
     }
+    
 
-    //åˆå§‹åŒ–çº¢é»‘åŒæ–¹å­åŠ›å€¼
+    //³õÊ¼»¯ºìºÚË«·½×ÓÁ¦Öµ
     void InitValue()
     {
         for (int chessPiece = 16; chessPiece < 48; chessPiece++)
@@ -453,17 +379,23 @@ struct boardStruct
             openBookKey ^= Player;
         }
     }
+
+    MoveStruct LastMove()
+    {
+        return mvsList[nowMoveNum-1];
+    }
+    
     /*
     int32 GenerateMove(int32* movesArray,bool capture=0)
-    ç”Ÿæˆç§»åŠ¨æ–¹æ¡ˆ
-    å°†ç§»åŠ¨æ–¹æ¡ˆä¼ å…¥moveArrayæ•°ç»„ï¼Œå…¶ä¸­ç»ˆç‚¹æ”¾åœ¨å·¦å…«ä½ï¼Œèµ·ç‚¹æ”¾åœ¨å³å…«ä½
-    è¿”å›æ€»çš„ç€æ³•æ•°é‡
-    captureé»˜è®¤ä¸º0ï¼Œè¡¨ç¤ºç”Ÿæˆæ‰€æœ‰æ–¹å¼ï¼Œ1ä¸ºç”Ÿæˆåƒå­
+    Éú³ÉÒÆ¶¯·½°¸
+    ½«ÒÆ¶¯·½°¸´«ÈëmoveArrayÊı×é£¬ÆäÖĞÖÕµã·ÅÔÚ×ó°ËÎ»£¬Æğµã·ÅÔÚÓÒ°ËÎ»
+    ·µ»Ø×ÜµÄ×Å·¨ÊıÁ¿
+    captureÄ¬ÈÏÎª0£¬±íÊ¾Éú³É²»³Ô×Ó£¬1ÎªÉú³É³Ô×Ó
     */
-    int32 GenerateMove(int32* movesArray,bool capture=0)
+    int32 GenerateMove(SearchMove* movesArray,int capture=0)//1 capture 0 noncap
     {
         int32 numOfMoves = 0;
-        int32 selfSide = SELF_SIDE(playerSide);//å°†æ£‹å­ä¸ä¹‹å¼‚æˆ–ä»¥åˆ¤æ–­å½’å±
+        int32 selfSide = SELF_SIDE(playerSide);//½«Æå×ÓÓëÖ®Òì»òÒÔÅĞ¶Ï¹éÊô
         int32 oppoSide = OPPO_SIDE(playerSide);
         for (int32 chessPieceFrom = selfSide; chessPieceFrom < selfSide+16; chessPieceFrom++)
         {
@@ -471,7 +403,7 @@ struct boardStruct
             int32 beginPosition = currentPosition[chessPieceFrom];
             switch (PIECE_INDEX(chessPieceFrom))
             {
-            case KING_FROM://å°†ç§»åŠ¨
+            case KING_FROM://½«ÒÆ¶¯
                 for (int32 i = 1; i <= preMove.kingPreMove[0][beginPosition]; i++)
                 {
                     int32 endPosition = preMove.kingPreMove[i][beginPosition];
@@ -480,18 +412,22 @@ struct boardStruct
                     {
                         if (!capture)
                         {
-                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                            if(!chessPieceTo)
+                                movesArray[numOfMoves++].move = RecordMove(beginPosition, endPosition);
                         }
                         else
                         {
                             if(chessPieceTo&oppoSide)
-                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                            {
+                                movesArray[numOfMoves].move = RecordMove(beginPosition, endPosition);
+                                movesArray[numOfMoves++].val=MvvLva(beginPosition,endPosition);
+                            }
                         }
                     }
 
                 }
                 break;
-            case ADVISOR_FROM://å£«ç§»åŠ¨
+            case ADVISOR_FROM://Ê¿ÒÆ¶¯
             case ADVISOR_TO:
                 for (int32 i = 1; i <= preMove.advisorPreMove[0][beginPosition]; i++)
                 {
@@ -501,17 +437,21 @@ struct boardStruct
                     {
                         if (!capture)
                         {
-                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                            if(!chessPieceTo)
+                                movesArray[numOfMoves++].move = RecordMove(beginPosition, endPosition);
                         }
                         else
                         {
-                            if (chessPieceTo & oppoSide)
-                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                            if(chessPieceTo&oppoSide)
+                            {
+                                movesArray[numOfMoves].move = RecordMove(beginPosition, endPosition);
+                                movesArray[numOfMoves++].val=MvvLva(beginPosition,endPosition);
+                            }
                         }
                     }
                 }
                 break;
-            case BISHOP_FROM://è±¡ç§»åŠ¨
+            case BISHOP_FROM://ÏóÒÆ¶¯
             case BISHOP_TO:
                 for (int32 i = 1; i <= preMove.bishopPreMove[0][beginPosition]; i++)
                 {
@@ -523,39 +463,47 @@ struct boardStruct
                     {
                         if (!capture)
                         {
-                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                            if(!chessPieceTo)
+                                movesArray[numOfMoves++].move = RecordMove(beginPosition, endPosition);
                         }
                         else
                         {
-                            if (chessPieceTo & oppoSide)
-                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                            if(chessPieceTo&oppoSide)
+                            {
+                                movesArray[numOfMoves].move = RecordMove(beginPosition, endPosition);
+                                movesArray[numOfMoves++].val=MvvLva(beginPosition,endPosition);
+                            }
                         }
                     }
                 }
                 break;
-            case KNIGHT_FROM://é©¬ç§»åŠ¨
+            case KNIGHT_FROM://ÂíÒÆ¶¯
             case KNIGHT_TO:
                 for (int32 i = 1; i <= preMove.knightPreMove[0][beginPosition]; i++)
                 {
                     int32 endPosition = preMove.knightPreMove[i][beginPosition];
                     if (currentBoard[preMove.knightLeg[i][beginPosition]])
-                        continue;//è¹©è„š
+                        continue;//õ¿½Å
                     int32 chessPieceTo = currentBoard[endPosition];
                     if (!(chessPieceTo & selfSide))
                     {
                         if (!capture)
                         {
-                             movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                            if(!chessPieceTo)
+                                movesArray[numOfMoves++].move = RecordMove(beginPosition, endPosition);
                         }
                         else
                         {
-                            if (chessPieceTo & oppoSide)
-                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                            if(chessPieceTo&oppoSide)
+                            {
+                                movesArray[numOfMoves].move = RecordMove(beginPosition, endPosition);
+                                movesArray[numOfMoves++].val=MvvLva(beginPosition,endPosition);
+                            }
                         }
                     }
                 }
                 break;
-            case ROOK_FROM://è½¦ç§»åŠ¨
+            case ROOK_FROM://³µÒÆ¶¯
             case ROOK_TO:
             {
                 if(capture)
@@ -563,21 +511,27 @@ struct boardStruct
                     int line=beginPosition>>4;
                     int col=beginPosition&15;
                     int bitState=bitLine[line];
-                    for (int32 i = 0; i <=1; i++)//è¡Œ
+                    for (int32 i = 0; i <=1; i++)//ĞĞ
                     {
                         int32 endPosition =beginPosition+preMove.rookLinePreMove[col][bitState][i]-col;
                         int32 chessPieceTo = currentBoard[endPosition];
                         if (chessPieceTo & oppoSide)
-                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        {
+                            movesArray[numOfMoves].move = RecordMove(beginPosition, endPosition);
+                            movesArray[numOfMoves++].val=MvvLva(beginPosition,endPosition);
+                        }
                     }
 
                     bitState=bitCol[col];
-                    for (int32 i = 0; i <=1; i++)//åˆ—
+                    for (int32 i = 0; i <=1; i++)//ÁĞ
                     {
                         int32 endPosition =beginPosition+((preMove.rookColPreMove[line][bitState][i]-line)<<4);
                         int32 chessPieceTo = currentBoard[endPosition];
                         if (chessPieceTo & oppoSide)
-                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        {
+                            movesArray[numOfMoves].move = RecordMove(beginPosition, endPosition);
+                            movesArray[numOfMoves++].val=MvvLva(beginPosition,endPosition);
+                        }
                     }
                 }
                 else
@@ -589,9 +543,8 @@ struct boardStruct
                     {
                         int32 endPosition =beginPosition+i-col;
                         int32 chessPieceTo = currentBoard[endPosition];
-                        if (chessPieceTo & selfSide)
-                            continue;
-                        movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        if (!chessPieceTo)
+                            movesArray[numOfMoves++].move = RecordMove(beginPosition, endPosition);
                     }
 
                     bitState=bitCol[col];
@@ -599,40 +552,50 @@ struct boardStruct
                     {
                         int32 endPosition =beginPosition+((i-line)<<4);
                         int32 chessPieceTo = currentBoard[endPosition];
-                        if (chessPieceTo & selfSide)
-                            continue;
-                        movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        if (!chessPieceTo)
+                            movesArray[numOfMoves++].move = RecordMove(beginPosition, endPosition);
                     }
                 }
                 break;
             }
                 
-            case CANNON_FROM://ç‚®ç§»åŠ¨
+            case CANNON_FROM://ÅÚÒÆ¶¯
             case CANNON_TO:
             {
                 int line=beginPosition>>4;
                 int col=beginPosition&15;
-                int bitState=bitLine[line];
-                for (int32 i = 0; i <=1; i++)//è¡Œ
+                int bitState;
+                if(capture)
                 {
-                    if (!preMove.cannonLinePreCap[col][bitState][i])
-                        continue;
-                    int32 endPosition =beginPosition+preMove.cannonLinePreCap[col][bitState][i]-col;
-                    int32 chessPieceTo = currentBoard[endPosition];
-                    if (chessPieceTo & oppoSide)
-                        movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
-                }
+                    bitState=bitLine[line];
+                    for (int32 i = 0; i <=1; i++)//ĞĞ
+                    {
+                        if (!preMove.cannonLinePreCap[col][bitState][i])
+                            continue;
+                        int32 endPosition =beginPosition+preMove.cannonLinePreCap[col][bitState][i]-col;
+                        int32 chessPieceTo = currentBoard[endPosition];
+                        if (chessPieceTo & oppoSide)
+                        {
+                            movesArray[numOfMoves].move = RecordMove(beginPosition, endPosition);
+                            movesArray[numOfMoves++].val=MvvLva(beginPosition,endPosition);
+                        }
+                    }
 
-                bitState=bitCol[col];
-                for (int32 i = 0; i <=1; i++)//åˆ—
-                {
-                    if (!preMove.cannonColPreCap[line][bitState][i])
-                        continue;
-                    int32 endPosition =beginPosition+((preMove.cannonColPreCap[line][bitState][i]-line)<<4);
-                    int32 chessPieceTo = currentBoard[endPosition];
-                    if (chessPieceTo & oppoSide)
-                        movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                    bitState=bitCol[col];
+                    for (int32 i = 0; i <=1; i++)//ÁĞ
+                    {
+                        if (!preMove.cannonColPreCap[line][bitState][i])
+                            continue;
+                        int32 endPosition =beginPosition+((preMove.cannonColPreCap[line][bitState][i]-line)<<4);
+                        int32 chessPieceTo = currentBoard[endPosition];
+                        if (chessPieceTo & oppoSide)
+                        {
+                            movesArray[numOfMoves].move = RecordMove(beginPosition, endPosition);
+                            movesArray[numOfMoves++].val=MvvLva(beginPosition,endPosition);
+                        }
+                    }
                 }
+                
                 if(!capture)
                 {
                     bitState=bitLine[line];
@@ -640,9 +603,8 @@ struct boardStruct
                     {
                         int32 endPosition =beginPosition+i-col;
                         int32 chessPieceTo = currentBoard[endPosition];
-                        if (chessPieceTo)
-                            continue;
-                        movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        if (!chessPieceTo)
+                            movesArray[numOfMoves++].move = RecordMove(beginPosition, endPosition);
                     }
 
                     bitState=bitCol[col];
@@ -650,15 +612,14 @@ struct boardStruct
                     {
                         int32 endPosition =beginPosition+((i-line)<<4);
                         int32 chessPieceTo = currentBoard[endPosition];
-                        if (chessPieceTo)
-                            continue;
-                        movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                        if (!chessPieceTo)
+                            movesArray[numOfMoves++].move = RecordMove(beginPosition, endPosition);
                     }
                 }
                 break;
             }
                 
-            default://å…µç§»åŠ¨
+            default://±øÒÆ¶¯
                 for (int32 i = 1; i <= preMove.pawnPreMove[playerSide][0][beginPosition]; i++)
                 {
                     int32 endPosition = preMove.pawnPreMove[playerSide][i][beginPosition];
@@ -667,39 +628,190 @@ struct boardStruct
                     {
                         if (!capture)
                         {
-                            movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                            if(!chessPieceTo)
+                                movesArray[numOfMoves++].move = RecordMove(beginPosition, endPosition);
                         }
                         else
                         {
-                            if(chessPieceTo&oppoSide)
-                                movesArray[numOfMoves++] = RecordMove(beginPosition, endPosition);
+                            if (chessPieceTo & oppoSide)
+                            {
+                                movesArray[numOfMoves].move = RecordMove(beginPosition, endPosition);
+                                movesArray[numOfMoves++].val=MvvLva(beginPosition,endPosition);
+                            }
                         }
                     }
                 }
                 break;
             }
         }
-        return numOfMoves;//è¿”å›ç€æ³•æ•°é‡
+        return numOfMoves;//·µ»Ø×Å·¨ÊıÁ¿
     }
 
-    //äº¤æ¢èµ°å­
+    int32 GenerateAllMove(SearchMove* movesArray)
+    {
+        int32 numOfMoves = 0;
+        int32 selfSide = SELF_SIDE(playerSide);//½«Æå×ÓÓëÖ®Òì»òÒÔÅĞ¶Ï¹éÊô
+        int32 oppoSide = OPPO_SIDE(playerSide);
+        for (int32 chessPieceFrom = selfSide; chessPieceFrom < selfSide+16; chessPieceFrom++)
+        {
+            if(!currentPosition[chessPieceFrom])continue;
+            int32 beginPosition = currentPosition[chessPieceFrom];
+            switch (PIECE_INDEX(chessPieceFrom))
+            {
+            case KING_FROM://½«ÒÆ¶¯
+                for (int32 i = 1; i <= preMove.kingPreMove[0][beginPosition]; i++)
+                {
+                    int32 endPosition = preMove.kingPreMove[i][beginPosition];
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (!(chessPieceTo & selfSide))
+                        movesArray[numOfMoves++].move = RecordMove(beginPosition, endPosition);
+
+                }
+                break;
+            case ADVISOR_FROM://Ê¿ÒÆ¶¯
+            case ADVISOR_TO:
+                for (int32 i = 1; i <= preMove.advisorPreMove[0][beginPosition]; i++)
+                {
+                    int32 endPosition = preMove.advisorPreMove[i][beginPosition];
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (!(chessPieceTo & selfSide))
+                        movesArray[numOfMoves++].move = RecordMove(beginPosition, endPosition);
+                }
+                break;
+            case BISHOP_FROM://ÏóÒÆ¶¯
+            case BISHOP_TO:
+                for (int32 i = 1; i <= preMove.bishopPreMove[0][beginPosition]; i++)
+                {
+                    int32 endPosition = preMove.bishopPreMove[i][beginPosition];
+                    if(currentBoard[preMove.bishopEye[i][beginPosition]])
+                        continue;
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (!(chessPieceTo & selfSide))
+                        movesArray[numOfMoves++].move = RecordMove(beginPosition, endPosition);
+                }
+                break;
+            case KNIGHT_FROM://ÂíÒÆ¶¯
+            case KNIGHT_TO:
+                for (int32 i = 1; i <= preMove.knightPreMove[0][beginPosition]; i++)
+                {
+                    int32 endPosition = preMove.knightPreMove[i][beginPosition];
+                    if (currentBoard[preMove.knightLeg[i][beginPosition]])
+                        continue;//õ¿½Å
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (!(chessPieceTo & selfSide))
+                        movesArray[numOfMoves++].move = RecordMove(beginPosition, endPosition);
+                }
+                break;
+            case ROOK_FROM://³µÒÆ¶¯
+            case ROOK_TO:
+            {
+                int line=beginPosition>>4;
+                int col=beginPosition&15;
+                int bitState=bitLine[line];
+                for (int32 i = preMove.rookLinePreMove[col][bitState][0]; i <=preMove.rookLinePreMove[col][bitState][1]; i++)//
+                {
+                    int32 endPosition =beginPosition+i-col;
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (chessPieceTo & selfSide)
+                        continue;
+                    movesArray[numOfMoves++].move = RecordMove(beginPosition, endPosition);
+                }
+
+                bitState=bitCol[col];
+                for (int32 i = preMove.rookColPreMove[line][bitState][0]; i <=preMove.rookColPreMove[line][bitState][1]; i++)//
+                {
+                    int32 endPosition =beginPosition+((i-line)<<4);
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (chessPieceTo & selfSide)
+                        continue;
+                    movesArray[numOfMoves++].move = RecordMove(beginPosition, endPosition);
+                }
+                break;
+            }
+                
+            case CANNON_FROM://ÅÚÒÆ¶¯
+            case CANNON_TO:
+            {
+                int line=beginPosition>>4;
+                int col=beginPosition&15;
+                int bitState=bitLine[line];
+                for (int32 i = 0; i <=1; i++)//ĞĞ
+                {
+                    if (!preMove.cannonLinePreCap[col][bitState][i])
+                        continue;
+                    int32 endPosition =beginPosition+preMove.cannonLinePreCap[col][bitState][i]-col;
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (chessPieceTo & oppoSide)
+                        movesArray[numOfMoves++].move = RecordMove(beginPosition, endPosition);
+                }
+
+                bitState=bitCol[col];
+                for (int32 i = 0; i <=1; i++)//ÁĞ
+                {
+                    if (!preMove.cannonColPreCap[line][bitState][i])
+                        continue;
+                    int32 endPosition =beginPosition+((preMove.cannonColPreCap[line][bitState][i]-line)<<4);
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (chessPieceTo & oppoSide)
+                        movesArray[numOfMoves++].move = RecordMove(beginPosition, endPosition);
+                }
+                
+                bitState=bitLine[line];
+                for (int32 i = preMove.rookLinePreMove[col][bitState][0]; i <=preMove.rookLinePreMove[col][bitState][1]; i++)//
+                {
+                    int32 endPosition =beginPosition+i-col;
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (chessPieceTo)
+                        continue;
+                    movesArray[numOfMoves++].move = RecordMove(beginPosition, endPosition);
+                }
+
+                bitState=bitCol[col];
+                for (int32 i = preMove.rookColPreMove[line][bitState][0]; i <=preMove.rookColPreMove[line][bitState][1]; i++)//
+                {
+                    int32 endPosition =beginPosition+((i-line)<<4);
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (chessPieceTo)
+                        continue;
+                    movesArray[numOfMoves++].move = RecordMove(beginPosition, endPosition);
+                }
+                
+                break;
+            }
+                
+            default://±øÒÆ¶¯
+                for (int32 i = 1; i <= preMove.pawnPreMove[playerSide][0][beginPosition]; i++)
+                {
+                    int32 endPosition = preMove.pawnPreMove[playerSide][i][beginPosition];
+                    int32 chessPieceTo = currentBoard[endPosition];
+                    if (!(chessPieceTo & selfSide))
+                        movesArray[numOfMoves++].move = RecordMove(beginPosition, endPosition);
+                }
+                break;
+            }
+        }
+        return numOfMoves;//·µ»Ø×Å·¨ÊıÁ¿
+    }
+
+    //½»»»×ß×Ó
     void ChangeSide()
     {
         playerSide = 1 ^ playerSide;
         zobr.Xor(Zobrist.Player, Player);
         openBookKey ^= Player;
     }
-    //å±€é¢è¯„ä»·å‡½æ•°
-    //ç‰¹æ®Šæ£‹å½¢
+    //¾ÖÃæÆÀ¼Ûº¯Êı
+    //ÌØÊâÆåĞÎ
     int SpeacialShape()
     {
         int redVal = 0, blackVal = 0,side=1;
-        int kingPos=SELF_SIDE(side)+KING_FROM;
-        if (currentPosition[SELF_SIDE(side) + ADVISOR_FROM] && currentPosition[SELF_SIDE(side) + ADVISOR_TO])//åŒå£«å…¨
+        int kingNum=SELF_SIDE(side)+KING_FROM;
+        int kingPos=currentPosition[kingNum];
+        if (currentPosition[SELF_SIDE(side) + ADVISOR_FROM] && currentPosition[SELF_SIDE(side) + ADVISOR_TO])//Ë«Ê¿È«
         {
-            if (kingPos == 0x37)//å¸…åœ¨åŸä½
+            if (kingPos == 0x37)//½«ÔÚÔ­Î»
             {
-                if (pieceTypes[currentBoard[0x36]] == ADVISOR && pieceTypes[currentBoard[0x38]] == ADVISOR)//å·¦å³åŒå£«
+                if (pieceTypes[currentBoard[0x36]] == ADVISOR && pieceTypes[currentBoard[0x38]] == ADVISOR)//×óÓÒË«Ê¿
                 {
                     for (int i = OPPO_SIDE(side) + CANNON_FROM; i <= OPPO_SIDE(side) + CANNON_TO; i++)
                     {
@@ -708,19 +820,22 @@ struct boardStruct
                             continue;
                         if (SAME_FILE(beginPos, kingPos))
                         {
-                            if (preMove.rookColPreMove[GETLINE(beginPos)][bitCol[GETCOL(beginPos)]][0] == GETLINE(kingPos))//ç©ºå¤´ç‚®
+
+                            if (preMove.rookColPreMove[GETLINE(beginPos)][bitCol[GETCOL(beginPos)]][0] == GETLINE(kingPos))//¿ÕÍ·ÅÚ
                             {
-                                redVal += vlHollowThreat[GETLINE(beginPos)];
+                                redVal += HollowThreatVal[GETLINE(beginPos)];
+                                //std::cout<<"red hollow"<<std::endl;
                             }
-                            else if (preMove.cannonSupCol[GETLINE(beginPos)][bitCol[GETCOL(beginPos)]][0] == GETLINE(kingPos) && (currentBoard[0x47] == SELF_SIDE(side) + KNIGHT_FROM || currentBoard[0x47] == SELF_SIDE(side) + KNIGHT_TO))//ç‚®é•‡çªå¿ƒé©¬
+                            else if (preMove.cannonSupCol[GETLINE(beginPos)][bitCol[GETCOL(beginPos)]][0] == GETLINE(kingPos) && (currentBoard[0x47] == SELF_SIDE(side) + KNIGHT_FROM || currentBoard[0x47] == SELF_SIDE(side) + KNIGHT_TO))//ÅÚÕòÎÑĞÄÂí
                             {
                                 redVal += CENTRAL_THREAT[GETLINE(beginPos)];
+                                //std::cout<<"red central"<<std::endl;
                             }
                         }
 
                     }
                 }
-                else if (pieceTypes[currentBoard[0x47]] == ADVISOR && (pieceTypes[currentBoard[0x36]] == ADVISOR || pieceTypes[currentBoard[0x38]] == ADVISOR))//èŠ±å¿ƒ+åº•çº¿ åŒå£«
+                else if (pieceTypes[currentBoard[0x47]] == ADVISOR && (pieceTypes[currentBoard[0x36]] == ADVISOR || pieceTypes[currentBoard[0x38]] == ADVISOR))//»¨ĞÄ+µ×Ïß Ë«Ê¿
                 {
                     for (int i = OPPO_SIDE(side) + CANNON_FROM; i <= OPPO_SIDE(side) + CANNON_TO; i++)
                     {
@@ -729,17 +844,17 @@ struct boardStruct
                             continue;
                         if (SAME_FILE(beginPos, kingPos))
                         {
-                            if (preMove.cannonSupCol[GETLINE(beginPos)][bitCol[GETCOL(beginPos)]][0] == GETLINE(kingPos))//æ™®é€šä¸­ç‚®
+                            if (preMove.cannonSupCol[GETLINE(beginPos)][bitCol[GETCOL(beginPos)]][0] == GETLINE(kingPos))//ÆÕÍ¨ÖĞÅÚ
                             {
                                 redVal += (CENTRAL_THREAT[GETLINE(beginPos)] >> 2);
 
-                                //å°†é—¨è¢«æ§
+                                //½«ÃÅ±»¿Ø
                                 if (!currentBoard[0x36] && IsProtected(1 ^ side, 0x36))
                                     redVal += 20;
                                 else if (!currentBoard[0x38] && IsProtected(1 ^ side, 0x38))
                                     redVal += 20;
 
-                                //è½¦åœ¨åº•çº¿ä¿æŠ¤å°†æ‰£åˆ†
+                                //³µÔÚµ×Ïß±£»¤½«¿Û·Ö
                                 for (int j = SELF_SIDE(side) + ROOK_FROM; j <= SELF_SIDE(side) + ROOK_TO; j++)
                                 {
                                     int rookPos = currentPosition[j];
@@ -756,30 +871,31 @@ struct boardStruct
                             }
 
                         }
-                        else if (SAME_RANK(beginPos, kingPos))//æ²‰åº•ç‚®
+                        else if (SAME_RANK(beginPos, kingPos))//³Áµ×ÅÚ
                         {
                             if (preMove.rookLinePreMove[GETCOL(beginPos)][bitLine[GETLINE(beginPos)]][0] == GETCOL(kingPos)|| preMove.rookLinePreMove[GETCOL(beginPos)][bitLine[GETLINE(beginPos)]][1] == GETCOL(kingPos))
-                                redVal += vlBlackBottomThreat[GETCOL(beginPos)];
+                                redVal += BlackBottomThreatVal[GETCOL(beginPos)];
                         }
 
                     }
                 }
             }
-            else if (kingPos == 0x47)//å°†åœ¨èŠ±å¿ƒå½±å“å£«
+            else if (kingPos == 0x47)//½«ÔÚ»¨ĞÄÓ°ÏìÊ¿
                 redVal += 20;
 
         }
-        else if (currentPosition[OPPO_SIDE(side) + ROOK_FROM] && currentPosition[OPPO_SIDE(side) + ROOK_TO])//ç¼ºå£«æ€•åŒè½¦
-            redVal += vlBlackAdvisorLeakage;
+        else if (currentPosition[OPPO_SIDE(side) + ROOK_FROM] && currentPosition[OPPO_SIDE(side) + ROOK_TO])//È±Ê¿ÅÂË«³µ
+            redVal += BlackAdvisorLeakageVal;
 
 
         side = 0;
-        kingPos = SELF_SIDE(side) + KING_FROM;
-        if (currentPosition[SELF_SIDE(side) + ADVISOR_FROM] && currentPosition[SELF_SIDE(side) + ADVISOR_TO])//åŒå£«å…¨
+        kingNum = SELF_SIDE(side) + KING_FROM;
+        kingPos=currentPosition[kingNum];
+        if (currentPosition[SELF_SIDE(side) + ADVISOR_FROM] && currentPosition[SELF_SIDE(side) + ADVISOR_TO])//Ë«Ê¿È«
         {
-            if (kingPos == 0xc7)//å¸…åœ¨åŸä½
+            if (kingPos == 0xc7)//Ë§ÔÚÔ­Î»
             {
-                if (pieceTypes[currentBoard[0xc6]] == ADVISOR && pieceTypes[currentBoard[0xc8]] == ADVISOR)//å·¦å³åŒå£«
+                if (pieceTypes[currentBoard[0xc6]] == ADVISOR && pieceTypes[currentBoard[0xc8]] == ADVISOR)//×óÓÒË«Ê¿
                 {
                     for (int i = OPPO_SIDE(side) + CANNON_FROM; i <= OPPO_SIDE(side) + CANNON_TO; i++)
                     {
@@ -788,11 +904,11 @@ struct boardStruct
                             continue;
                         if (SAME_FILE(beginPos, kingPos))
                         {
-                            if (preMove.rookColPreMove[GETLINE(beginPos)][bitCol[GETCOL(beginPos)]][1] >= GETLINE(kingPos))//ç©ºå¤´ç‚®
+                            if (preMove.rookColPreMove[GETLINE(beginPos)][bitCol[GETCOL(beginPos)]][1] >= GETLINE(kingPos))//¿ÕÍ·ÅÚ
                             {
-                                blackVal += vlHollowThreat[15-GETLINE(beginPos)];
+                                blackVal += HollowThreatVal[15-GETLINE(beginPos)];
                             }
-                            else if (preMove.cannonSupCol[GETLINE(beginPos)][bitCol[GETCOL(beginPos)]][1] == GETLINE(kingPos) && (currentBoard[0xb7] == SELF_SIDE(side) + KNIGHT_FROM || currentBoard[0xb7] == SELF_SIDE(side) + KNIGHT_TO))//ç‚®é•‡çªå¿ƒé©¬
+                            else if (preMove.cannonSupCol[GETLINE(beginPos)][bitCol[GETCOL(beginPos)]][1] == GETLINE(kingPos) && (currentBoard[0xb7] == SELF_SIDE(side) + KNIGHT_FROM || currentBoard[0xb7] == SELF_SIDE(side) + KNIGHT_TO))//ÅÚÕòÎÑĞÄÂí
                             {
                                 blackVal += CENTRAL_THREAT[15-GETLINE(beginPos)];
                             }
@@ -800,7 +916,7 @@ struct boardStruct
 
                     }
                 }
-                else if (pieceTypes[currentBoard[0xb7]] == ADVISOR && (pieceTypes[currentBoard[0xc6]] == ADVISOR || pieceTypes[currentBoard[0xc8]] == ADVISOR))//èŠ±å¿ƒ+åº•çº¿ åŒå£«
+                else if (pieceTypes[currentBoard[0xb7]] == ADVISOR && (pieceTypes[currentBoard[0xc6]] == ADVISOR || pieceTypes[currentBoard[0xc8]] == ADVISOR))//»¨ĞÄ+µ×Ïß Ë«Ê¿
                 {
                     for (int i = OPPO_SIDE(side) + CANNON_FROM; i <= OPPO_SIDE(side) + CANNON_TO; i++)
                     {
@@ -809,17 +925,17 @@ struct boardStruct
                             continue;
                         if (SAME_FILE(beginPos, kingPos))
                         {
-                            if (preMove.cannonSupCol[GETLINE(beginPos)][bitCol[GETCOL(beginPos)]][1] == GETLINE(kingPos))//æ™®é€šä¸­ç‚®
+                            if (preMove.cannonSupCol[GETLINE(beginPos)][bitCol[GETCOL(beginPos)]][1] == GETLINE(kingPos))//ÆÕÍ¨ÖĞÅÚ
                             {
                                 blackVal += (CENTRAL_THREAT[15-GETLINE(beginPos)] >> 2);
 
-                                //å°†é—¨è¢«æ§
+                                //½«ÃÅ±»¿Ø
                                 if (!currentBoard[0xc6] && IsProtected(1 ^ side, 0xc6))
                                     blackVal += 20;
                                 else if (!currentBoard[0xc8] && IsProtected(1 ^ side, 0xc8))
                                     blackVal += 20;
 
-                                //è½¦åœ¨åº•çº¿ä¿æŠ¤å°†æ‰£åˆ†
+                                //³µÔÚµ×Ïß±£»¤½«¿Û·Ö
                                 for (int j = SELF_SIDE(side) + ROOK_FROM; j <= SELF_SIDE(side) + ROOK_TO; j++)
                                 {
                                     int rookPos = currentPosition[j];
@@ -836,62 +952,248 @@ struct boardStruct
                             }
 
                         }
-                        else if (SAME_RANK(beginPos, kingPos))//æ²‰åº•ç‚®
+                        else if (SAME_RANK(beginPos, kingPos))//³Áµ×ÅÚ
                         {
                             if (preMove.rookLinePreMove[GETCOL(beginPos)][bitLine[GETLINE(beginPos)]][0] == GETCOL(kingPos)|| preMove.rookLinePreMove[GETCOL(beginPos)][bitLine[GETLINE(beginPos)]][1] == GETCOL(kingPos))
-                                blackVal += vlRedBottomThreat[GETCOL(beginPos)];
+                                blackVal += RedBottomThreatVal[GETCOL(beginPos)];
                         }
 
                     }
                 }
             }
-            else if (kingPos == 0xb7)//å°†åœ¨èŠ±å¿ƒå½±å“å£«
+            else if (kingPos == 0xb7)//½«ÔÚ»¨ĞÄÓ°ÏìÊ¿
                 blackVal += 20;
 
         }
-        else if (currentPosition[OPPO_SIDE(side) + ROOK_FROM] && currentPosition[OPPO_SIDE(side) + ROOK_TO])//ç¼ºå£«æ€•åŒè½¦
-            blackVal += vlRedAdvisorLeakage;
+        else if (currentPosition[OPPO_SIDE(side) + ROOK_FROM] && currentPosition[OPPO_SIDE(side) + ROOK_TO])//È±Ê¿ÅÂË«³µ
+            blackVal += RedAdvisorLeakageVal;
 
         return playerSide == 0 ? (redVal - blackVal) : (blackVal - redVal);
     }
-    //è½¦çš„çµæ´»æ€§
+
+    int StringHold()
+    {
+        int holdVal[2];
+        int beginPos,endPos;
+        for(int side=0;side<=1;side++)
+        {
+            holdVal[side]=0;
+            int selfSide=SELF_SIDE(side);
+            int oppoSide=OPPO_SIDE(side);
+
+            //³µÇ£ÖÆ
+            for(int i=selfSide+ROOK_FROM;i<=selfSide+ROOK_TO;i++)
+            {
+                beginPos=currentPosition[i];
+                if(!beginPos)
+                    continue;
+
+                //Ç£ÖÆ¶Ô·½½«
+                endPos=currentPosition[oppoSide+KING_FROM];
+                int line=GETLINE(beginPos);
+                int col=GETCOL(beginPos);
+                if(line==GETLINE(endPos))//Í¬Ò»ĞĞ
+                {
+                    int dirction=(beginPos<endPos)?1:0;
+                    if(preMove.cannonLinePreCap[col][bitLine[line]][dirction]==GETCOL(endPos))
+                    {
+                        int midPos=beginPos-col+preMove.rookLinePreMove[col][bitLine[line]][dirction];
+                        if((currentBoard[midPos]&selfSide)==0)
+                        {
+                            //Ç£ÖÆ×ÓÓĞ¼ÛÖµÇÒ²»±»ÆäËû×Ó±£»¤
+                            if(ValuableStringPieces[currentBoard[midPos]]>0&&!IsProtected(1^side,midPos,oppoSide+KING_FROM))
+                            {
+                                holdVal[side]+=StringValueTabVal[endPos-midPos+256];
+                            }
+                        }
+                    }
+                }
+                if(col==GETCOL(endPos))//Í¬Ò»ÁĞ
+                {
+                    int dirction=(beginPos<endPos)?1:0;
+                    if(preMove.cannonColPreCap[line][bitCol[col]][dirction]==GETLINE(endPos))
+                    {
+                        int midPos=beginPos+((preMove.rookColPreMove[line][bitCol[col]][dirction]-line)<<4);
+                        if((currentBoard[midPos]&selfSide)==0)
+                        {
+                            //Ç£ÖÆ×ÓÓĞ¼ÛÖµÇÒ²»±»ÆäËû×Ó±£»¤
+                            if(ValuableStringPieces[currentBoard[midPos]]>0&&!IsProtected(1^side,midPos,oppoSide+KING_FROM))
+                            {
+                                holdVal[side]+=StringValueTabVal[endPos-midPos+256];
+                            }
+                        }
+                    }
+                }
+
+                //Ç£ÖÆ¶Ô·½³µ
+                for(int j=oppoSide+ROOK_FROM;j<=oppoSide+ROOK_TO;j++)
+                {
+                    endPos=currentPosition[j];
+                    if(!endPos)
+                        continue;
+                    int line=GETLINE(beginPos);
+                    int col=GETCOL(beginPos);
+                    if(line==GETLINE(endPos))//Í¬Ò»ĞĞ
+                    {
+                        int dirction=(beginPos<endPos)?1:0;
+                        if(preMove.cannonLinePreCap[col][bitLine[line]][dirction]==GETCOL(endPos))
+                        {
+                            int midPos=beginPos-col+preMove.rookLinePreMove[col][bitLine[line]][dirction];
+                            if((currentBoard[midPos]&selfSide)==0)
+                            {
+                                //Ç£ÖÆ×ÓÓĞ¼ÛÖµÇÒ²»±»ÆäËû×Ó±£»¤ÇÒ³µÎŞ±£»¤
+                                if(ValuableStringPieces[currentBoard[midPos]]>0&&!IsProtected(1^side,midPos,j)&&!IsProtected(1^side,endPos))
+                                {
+                                    holdVal[side]+=StringValueTabVal[endPos-midPos+256];
+                                }
+                            }
+                        }
+                    }
+                    if(col==GETCOL(endPos))//Í¬Ò»ÁĞ
+                    {
+                        int dirction=(beginPos<endPos)?1:0;
+                        if(preMove.cannonColPreCap[line][bitCol[col]][dirction]==GETLINE(endPos))
+                        {
+                            int midPos=beginPos+((preMove.rookColPreMove[line][bitCol[col]][dirction]-line)<<4);
+                            if((currentBoard[midPos]&selfSide)==0)
+                            {
+                                if(ValuableStringPieces[currentBoard[midPos]]>0&&!IsProtected(1^side,midPos,j)&&!IsProtected(1^side,endPos))
+                                {
+                                    holdVal[side]+=StringValueTabVal[endPos-midPos+256];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            //ÅÚÇ£ÖÆ
+            for(int i=selfSide+CANNON_FROM;i<=selfSide+CANNON_TO;i++)
+            {
+                beginPos=currentPosition[i];
+                if(!beginPos)
+                    continue;
+
+                //Ç£ÖÆ¶Ô·½½«
+                endPos=currentPosition[oppoSide+KING_FROM];
+                int line=GETLINE(beginPos);
+                int col=GETCOL(beginPos);
+                if(line==GETLINE(endPos))//Í¬Ò»ĞĞ
+                {
+                    int dirction=(beginPos<endPos)?1:0;
+                    if(preMove.cannonSupLine[col][bitLine[line]][dirction]==GETCOL(endPos))
+                    {
+                        int midPos=beginPos-col+preMove.cannonLinePreCap[col][bitLine[line]][dirction];
+                        if((currentBoard[midPos]&selfSide)==0)
+                        {
+                            //Ç£ÖÆ×ÓÓĞ¼ÛÖµÇÒ²»±»ÆäËû×Ó±£»¤
+                            if(ValuableStringPieces[currentBoard[midPos]]>1&&!IsProtected(1^side,midPos,oppoSide+KING_FROM))
+                            {
+                                holdVal[side]+=StringValueTabVal[endPos-midPos+256];
+                            }
+                        }
+                    }
+                }
+                if(col==GETCOL(endPos))//Í¬Ò»ÁĞ
+                {
+                    int dirction=(beginPos<endPos)?1:0;
+                    if(preMove.cannonSupCol[line][bitCol[col]][dirction]==GETLINE(endPos))
+                    {
+                        int midPos=beginPos+((preMove.cannonColPreCap[line][bitCol[col]][dirction]-line)<<4);
+                        if((currentBoard[midPos]&selfSide)==0)
+                        {
+                            //Ç£ÖÆ×ÓÓĞ¼ÛÖµÇÒ²»±»ÆäËû×Ó±£»¤
+                            if(ValuableStringPieces[currentBoard[midPos]]>1&&!IsProtected(1^side,midPos,oppoSide+KING_FROM))
+                            {
+                                holdVal[side]+=StringValueTabVal[endPos-midPos+256];
+                            }
+                        }
+                    }
+                }
+
+                //Ç£ÖÆ¶Ô·½³µ
+                for(int j=oppoSide+ROOK_FROM;j<=oppoSide+ROOK_TO;j++)
+                {
+                    endPos=currentPosition[j];
+                    if(!endPos)
+                        continue;
+                    int line=GETLINE(beginPos);
+                    int col=GETCOL(beginPos);
+                    if(line==GETLINE(endPos))//Í¬Ò»ĞĞ
+                    {
+                        int dirction=(beginPos<endPos)?1:0;
+                        if(preMove.cannonSupLine[col][bitLine[line]][dirction]==GETCOL(endPos))
+                        {
+                            int midPos=beginPos-col+preMove.cannonLinePreCap[col][bitLine[line]][dirction];
+                            if((currentBoard[midPos]&selfSide)==0)
+                            {
+                                //Ç£ÖÆ×ÓÓĞ¼ÛÖµÇÒ²»±»ÆäËû×Ó±£»¤ÇÒ³µÎŞ±£»¤
+                                if(ValuableStringPieces[currentBoard[midPos]]>1&&!IsProtected(1^side,midPos,j)&&!IsProtected(1^side,endPos))
+                                {
+                                    holdVal[side]+=StringValueTabVal[endPos-midPos+256];
+                                }
+                            }
+                        }
+                    }
+                    if(col==GETCOL(endPos))//Í¬Ò»ÁĞ
+                    {
+                        int dirction=(beginPos<endPos)?1:0;
+                        if(preMove.cannonSupCol[line][bitCol[col]][dirction]==GETLINE(endPos))
+                        {
+                            int midPos=beginPos+((preMove.cannonColPreCap[line][bitCol[col]][dirction]-line)<<4);
+                            if((currentBoard[midPos]&selfSide)==0)
+                            {
+                                //Ç£ÖÆ×ÓÓĞ¼ÛÖµÇÒ²»±»ÆäËû×Ó±£»¤ÇÒ³µÎŞ±£»¤
+                                if(ValuableStringPieces[currentBoard[midPos]]>1&&!IsProtected(1^side,midPos,j)&&!IsProtected(1^side,endPos))
+                                {
+                                    holdVal[side]+=StringValueTabVal[endPos-midPos+256];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return playerSide==0?(holdVal[0]-holdVal[1]):(holdVal[1]-holdVal[0]);
+    }
+
+
+    //³µµÄÁé»îĞÔ
     int RookMobility()
     {
         int rookMob[2] = { 0,0 };
-        for (int side = 0; side < 2; side++)
+        for (int side = 0; side <=1; side++)
         {
             for (int i = SELF_SIDE(side) + ROOK_FROM; i <= SELF_SIDE(side) + ROOK_TO; i++)
             {
-                int src = currentPosition[i];  //è½¦å½“å‰çš„ä½ç½®
-                if (!src)//è½¦å·²ç»è¢«åƒ
+                int beginPos = currentPosition[i];  //³µµ±Ç°µÄÎ»ÖÃ
+                if (!beginPos)//³µÒÑ¾­±»³Ô
                     continue;
 
-                //å³
-                int col = preMove.rookLinePreMove[GETCOL(src)][bitLine[GETLINE(src)]][1];
-                if (!(currentBoard[GetOrder(GETLINE(src), col)] & SELF_SIDE(side)))
-                    rookMob[side]++;
-                rookMob[side] += col - GETCOL(src)-1;
+                int col=GETCOL(beginPos),line=GETLINE(beginPos);
+                //ÓÒ
+                int endCol = preMove.rookLinePreMove[col][bitLine[line]][1];
+                int beginCol = preMove.rookLinePreMove[col][bitLine[line]][0];
+                if (currentBoard[beginPos-col+endCol] & SELF_SIDE(side))
+                    rookMob[side]--;
+                if (currentBoard[beginPos-col+beginCol] & SELF_SIDE(side))
+                    rookMob[side]--;
+                rookMob[side] += endCol-beginCol+(beginCol==col)+(endCol==col);
 
-                //å·¦
-                col = preMove.rookLinePreMove[GETCOL(src)][bitLine[GETLINE(src)]][0];
-                if (!(currentBoard[GetOrder(GETLINE(src), col)] & SELF_SIDE(side)))
-                    rookMob[side]++;
-                rookMob[side] += GETCOL(src) - col-1;
+                //ÉÏÏÂ
+                int endLine = preMove.rookColPreMove[line][bitCol[col]][1];
+                int beginLine=preMove.rookColPreMove[line][bitCol[col]][0];
+                if (currentBoard[beginPos+((endLine-line)<<4)] & SELF_SIDE(side))
+                    rookMob[side]--;
+                if (currentBoard[beginPos+((beginLine-line)<<4)] & SELF_SIDE(side))
+                    rookMob[side]--;
+                rookMob[side] += endLine - beginLine+(beginLine==line)+(endLine==line);
 
-                //ä¸‹
-                int line = preMove.rookColPreMove[GETLINE(src)][bitCol[GETCOL(src)]][1];
-                if (!(currentBoard[GetOrder(line, GETCOL(src))] & SELF_SIDE(side)))
-                    rookMob[side]++;
-                rookMob[side] += line - GETLINE(src)-1;
 
-                //ä¸Š
-                line = preMove.rookColPreMove[GETLINE(src)][bitCol[GETCOL(src)]][0];
-                if (!(currentBoard[GetOrder(line, GETCOL(src))] & SELF_SIDE(side)))
-                    rookMob[side]++;
-                rookMob[side] += GETLINE(src) - line-1;
+                //printf("\n\nline=%d col=%d beginline=%d endline=%d begincol=%d endcol=%d\n\n",line,col,beginLine,endLine,beginCol,endCol);
             }
         }
-        //std::cout << "rookMobility_redï¼š" << rookMob[0] << " ";
+        //std::cout << "rookMobility_red£º" << rookMob[0] << " ";
         //std::cout << "black:" << rookMob[1] << '\n';
         return (playerSide == 0 ? (rookMob[0] - rookMob[1]) : (rookMob[1] - rookMob[0])) >> 1;
     }
@@ -902,17 +1204,17 @@ struct boardStruct
         {
             for (int i = SELF_SIDE(side) + KNIGHT_FROM; i <= SELF_SIDE(side) + KNIGHT_TO; i++)
             {
-                int count = 0;    //å¥½èµ°æ³•çš„ä¸ªæ•°
-                int src = currentPosition[i];//é©¬å½“å‰çš„ä½ç½®
-                if (!src)//é©¬å·²ç»è¢«åƒ
+                int count = 0;    //ºÃ×ß·¨µÄ¸öÊı
+                int beginPos = currentPosition[i];//Âíµ±Ç°µÄÎ»ÖÃ
+                if (!beginPos)//ÂíÒÑ¾­±»³Ô
                     continue;
-                for (int j = 1; j <= preMove.knightPreMove[0][src]; j++)
+                for (int j = 1; j <= preMove.knightPreMove[0][beginPos]; j++)
                 {
-                    int dst = preMove.knightPreMove[j][src];
-                    if (!currentBoard[preMove.knightLeg[j][src]] &&   //ä¸ä¼šè¹©é©¬è…¿
-                        !N_BAD_SQUARES[dst] && !(currentBoard[dst] & SELF_SIDE(side)) &&  //ç›®æ ‡ä½ç½®ä¸æ˜¯å·±æ–¹æ£‹å­ä¸”ç›®æ ‡ä½ç½®ä¸æ˜¯ä¸åˆ©ä½ç½®
-                        !IsProtected(1 ^ side, dst))   //ç›®æ ‡ä½ç½®æ²¡æœ‰è¢«å¯¹æ–¹çš„æ£‹å­å®ˆæŠ¤
-                        if ((++count) > 1)//å·²ç»æœåˆ°äº†å¤§äºä¸€ä¸ªçš„å¥½èµ°æ³•ï¼Œå¯ä»¥é€€å‡º
+                    int dst = preMove.knightPreMove[j][beginPos];
+                    if (!currentBoard[preMove.knightLeg[j][beginPos]] &&   //²»»áõ¿ÂíÍÈ
+                        !KnigntBadPos[dst] && !(currentBoard[dst] & SELF_SIDE(side)) &&  //Ä¿±êÎ»ÖÃ²»ÊÇ¼º·½Æå×ÓÇÒÄ¿±êÎ»ÖÃ²»ÊÇ²»ÀûÎ»ÖÃ
+                        !IsProtected(1 ^ side, dst))   //Ä¿±êÎ»ÖÃÃ»ÓĞ±»¶Ô·½µÄÆå×ÓÊØ»¤
+                        if ((++count) > 1)//ÒÑ¾­ËÑµ½ÁË´óÓÚÒ»¸öµÄºÃ×ß·¨£¬¿ÉÒÔÍË³ö
                             break;
                 }
                 knightPenalty[side] += (count == 0 ? 10 : (count == 1 ? 5 : 0));
@@ -920,26 +1222,56 @@ struct boardStruct
         }
         return playerSide == 0 ?( -knightPenalty[0] + knightPenalty[1] ):( -knightPenalty[1] + knightPenalty[0]);
     }
-    int Evaluate(void)
+    int Evaluate(int alpha,int beta)
     {
-        return (playerSide == 0 ? (redVal - blackVal) : (blackVal - redVal)) + vlAdvanced + SpeacialShape() + RookMobility() + KnightBlock();/*ADVANCED_VALUE+KnightBlock()+RookMobility()+ SpeacialShape()*/
+
+        // 1. ËÄ¼¶ÍµÀÁÆÀ¼Û(³¹µ×ÍµÀÁÆÀ¼Û)£¬Ö»°üÀ¨×ÓÁ¦Æ½ºâ£»
+        int vl = (playerSide?(blackVal-redVal):(redVal-blackVal))+AdvancedVal;
+        if (vl + EVALUATE_LEVEL_1 <= alpha) 
+            return vl + EVALUATE_LEVEL_1;
+        else if (vl - EVALUATE_LEVEL_1 >= beta) 
+            return vl - EVALUATE_LEVEL_1;
+
+        // 2. Èı¼¶ÍµÀÁÆÀ¼Û£¬°üÀ¨ÌØÊâÆåĞÍ£»
+        vl += SpeacialShape();
+        if (vl + EVALUATE_LEVEL_2 <= alpha)
+            return vl + EVALUATE_LEVEL_2;
+        else if (vl - EVALUATE_LEVEL_2 >= beta) 
+            return vl - EVALUATE_LEVEL_2;
+
+        // 3. ¶ş¼¶ÍµÀÁÆÀ¼Û£¬°üÀ¨Ç£ÖÆ£»
+        vl += StringHold();
+        if (vl + EVALUATE_LEVEL_3 <= alpha) 
+            return vl + EVALUATE_LEVEL_3;
+        else if (vl - EVALUATE_LEVEL_3 >= beta) 
+            return vl - EVALUATE_LEVEL_3;
+
+        // 4. Ò»¼¶ÍµÀÁÆÀ¼Û£¬°üÀ¨³µµÄÁé»îĞÔ£»
+        vl += RookMobility();
+        if (vl + EVALUATE_LEVEL_4 <= alpha) 
+            return vl + EVALUATE_LEVEL_4;
+        else if (vl - EVALUATE_LEVEL_4 >= beta) 
+            return vl - EVALUATE_LEVEL_4;
+
+        // 5. Áã¼¶ÍµÀÁÆÀ¼Û(ÍêÈ«ÆÀ¼Û)£¬°üÀ¨ÂíµÄ×è°­¡£
+        return vl + KnightBlock();
     }
 
     /*
     void DelPiece(int32 pos,int32 chessPiece)
-    ç§»é™¤ä¸€ä¸ªæ£‹å­ posä¸ºç§»é™¤æ£‹å­ä½ç½®ï¼ŒchhessPieceä¸ºç§»é™¤æ£‹å­ç¼–å·
+    ÒÆ³ıÒ»¸öÆå×Ó posÎªÒÆ³ıÆå×ÓÎ»ÖÃ£¬chhessPieceÎªÒÆ³ıÆå×Ó±àºÅ
     */
     void DelPiece(int32 pos, int32 chessPiece)
     {
         currentBoard[pos] = 0;
         currentPosition[chessPiece] = 0;
-        int32 pieceType = GETTYPE(chessPiece);//æ£‹å­å…·ä½“ç±»å‹ï¼Œæ•°å€¼èŒƒå›´0-6
+        int32 pieceType = GETTYPE(chessPiece);//Æå×Ó¾ßÌåÀàĞÍ£¬ÊıÖµ·¶Î§0-6
 
-        //bitBoardä¿®æ”¹
-        bitLine[(pos>>4)]^=bitMaskLine[pos];
-        bitCol[(pos&15)]^=bitMaskCol[pos];
+        //bitBoardĞŞ¸Ä
+        bitLine[GETLINE(pos)]^=bitMaskLine[pos];
+        bitCol[GETCOL(pos)]^=bitMaskCol[pos];
 
-        // çº¢æ–¹å‡åˆ†ï¼Œé»‘æ–¹åŠ åˆ†
+        // ºì·½¼õ·Ö£¬ºÚ·½¼Ó·Ö
         if (chessPiece < 32)
         {
             //redVal -= cucvlPiecePos[pieceType][pos];
@@ -950,8 +1282,8 @@ struct boardStruct
         }
         else
         {
-            //blackVal -= cucvlPiecePos[pieceType][SQUARE_FLIP(pos)];//å–å€¼é¢ å€’
-            blackVal -= blackValueTable[pieceType][pos];//å–å€¼é¢ å€’
+            //blackVal -= cucvlPiecePos[pieceType][SQUARE_FLIP(pos)];//È¡Öµµßµ¹
+            blackVal -= blackValueTable[pieceType][pos];//È¡Öµµßµ¹
             zobr.Xor(Zobrist.Table[pieceType + 7][pos], Table[pieceType + 7][pos]);
             if (openBookFlag)
                 openBookKey ^= Table[pieceType + 7][pos - ((pos & 15) << 1) + 14];
@@ -960,19 +1292,19 @@ struct boardStruct
 
     /*
     void AddPiece(int32 pos,int32 chessPiece)
-    å¢åŠ ä¸€ä¸ªæ£‹å­ posä¸ºå¢åŠ æ£‹å­ä½ç½®ï¼ŒchhessPieceä¸ºå¢åŠ æ£‹å­ç¼–å·
+    Ôö¼ÓÒ»¸öÆå×Ó posÎªÔö¼ÓÆå×ÓÎ»ÖÃ£¬chhessPieceÎªÔö¼ÓÆå×Ó±àºÅ
     */
     void AddPiece(int32 pos, int32 chessPiece)
     {
         currentBoard[pos] = chessPiece;
         currentPosition[chessPiece] = pos;
-        int32 pieceType = GETTYPE(chessPiece);//æ£‹å­å…·ä½“ç±»å‹ï¼Œæ•°å€¼èŒƒå›´0-6
+        int32 pieceType = GETTYPE(chessPiece);//Æå×Ó¾ßÌåÀàĞÍ£¬ÊıÖµ·¶Î§0-6
 
-        //bitBoardä¿®æ”¹
-        bitLine[(pos>>4)]^=bitMaskLine[pos];
-        bitCol[(pos&15)]^=bitMaskCol[pos];
+        //bitBoardĞŞ¸Ä
+        bitLine[GETLINE(pos)]^=bitMaskLine[pos];
+        bitCol[GETCOL(pos)]^=bitMaskCol[pos];
 
-        // çº¢æ–¹åŠ åˆ†ï¼Œé»‘æ–¹å‡åˆ†
+        // ºì·½¼Ó·Ö£¬ºÚ·½¼õ·Ö
         if (chessPiece < 32)
         {
             //redVal += cucvlPiecePos[pieceType][pos];
@@ -983,8 +1315,8 @@ struct boardStruct
         }
         else
         {
-            //blackVal += cucvlPiecePos[pieceType][SQUARE_FLIP(pos)];//å–å€¼é¢ å€’
-            blackVal += blackValueTable[pieceType][pos];//å–å€¼é¢ å€’
+            //blackVal += cucvlPiecePos[pieceType][SQUARE_FLIP(pos)];//È¡Öµµßµ¹
+            blackVal += blackValueTable[pieceType][pos];//È¡Öµµßµ¹
             zobr.Xor(Zobrist.Table[pieceType + 7][pos], Table[pieceType + 7][pos]);
             if (openBookFlag)
                 openBookKey ^= Table[pieceType+7][pos  - ((pos & 15)<<1)+ 14];
@@ -992,19 +1324,18 @@ struct boardStruct
     }
     
     /*
-    void MakeMove(int32 Move)
-    è¿›è¡Œä¸€æ¬¡ç§»åŠ¨ï¼ŒMoveå‰å…«ä½ä¸ºç»ˆç‚¹ï¼Œåå…«ä½ä¸ºèµ·ç‚¹
+    int MakeMove(int32 Move)
+    ½øĞĞÒ»´ÎÒÆ¶¯£¬MoveÇ°°ËÎ»ÎªÖÕµã£¬ºó°ËÎ»ÎªÆğµã£¬·µ»ØÒ»ÎªºÏ·¨
     */
-    void MakeMove(int32 Move)
+    bool MakeMove(int32 Move,bool check=1)
     {
-        uint64_t dwKey = zobr.dwKey;//è®°å½•å±€é¢
-        ChangeSide();
+        uint64_t dwKey = zobr.dwKey;//¼ÇÂ¼¾ÖÃæ
         int Capture = 0;
         int32 beginPos, endPos, chessPiece;
         beginPos = GETBEGIN(Move);
         endPos = GETEND(Move);
         chessPiece = currentBoard[beginPos];
-        if (currentBoard[endPos])//å¦‚æœå‘ç”Ÿåƒå­ï¼Œåˆ™è®°å½•åƒå­ç¼–å·ï¼Œå¯¹å±€é¢ä¼°å€¼è¿›è¡Œä¿®æ”¹
+        if (currentBoard[endPos])//Èç¹û·¢Éú³Ô×Ó£¬Ôò¼ÇÂ¼³Ô×Ó±àºÅ£¬¶Ô¾ÖÃæ¹ÀÖµ½øĞĞĞŞ¸Ä
         {
             Capture = currentBoard[endPos];
             DelPiece(endPos, Capture);
@@ -1012,22 +1343,35 @@ struct boardStruct
         DelPiece(beginPos, chessPiece);
         AddPiece(endPos, chessPiece);
 
-        mvsList[nowMoveNum++].Set(Move, Capture,InCheck(), dwKey);//åœ¨ç§»åŠ¨åˆ—è¡¨ä¸­åŠ å…¥æ­¤æ¬¡ç§»åŠ¨ä¿¡æ¯
-        nowDepth++;//å½“å‰æœç´¢æ·±åº¦++
-        return;
+        if(check)
+        {
+            if(InCheck())
+            {
+                DelPiece(endPos,chessPiece);
+                AddPiece(beginPos,chessPiece);
+                if(Capture)
+                    AddPiece(endPos,Capture);
+                return 0;
+            }
+        }
+        
+        ChangeSide();
+        mvsList[nowMoveNum++].Set(Move, Capture,InCheck(), dwKey);//ÔÚÒÆ¶¯ÁĞ±íÖĞ¼ÓÈë´Ë´ÎÒÆ¶¯ĞÅÏ¢
+        nowDepth++;//µ±Ç°ËÑË÷Éî¶È++
+        return 1;
     }
 
     /*
     void UndoMakeMove()
-    æ’¤é”€ä¸€æ¬¡ç§»åŠ¨ï¼ŒMoveå‰å…«ä½ä¸ºç»ˆç‚¹ï¼Œåå…«ä½ä¸ºèµ·ç‚¹
+    ³·ÏúÒ»´ÎÒÆ¶¯£¬MoveÇ°°ËÎ»ÎªÖÕµã£¬ºó°ËÎ»ÎªÆğµã
     */
     void UndoMakeMove()
     {
         nowMoveNum--;
         nowDepth--;
         ChangeSide();
-        //ç”±äºåªèƒ½ä»å±€é¢å¾—åˆ°Zobristå€¼ï¼Œå¹¶ä¸èƒ½ä»Zobristå€¼å¾—åˆ°å±€é¢
-        //æ‰€ä»¥è¦è®°å½•å½“å‰æ’¤é”€ç€æ³•æ˜¯å¦åƒå­
+        //ÓÉÓÚÖ»ÄÜ´Ó¾ÖÃæµÃµ½ZobristÖµ£¬²¢²»ÄÜ´ÓZobristÖµµÃµ½¾ÖÃæ
+        //ËùÒÔÒª¼ÇÂ¼µ±Ç°³·Ïú×Å·¨ÊÇ·ñ³Ô×Ó
         int32 beginPos, endPos, chessPiece;
         beginPos = GETBEGIN(mvsList[nowMoveNum].wmv);
         endPos = GETEND(mvsList[nowMoveNum].wmv);
@@ -1041,15 +1385,15 @@ struct boardStruct
         }
     }
 
-    bool InCheck()//ç”±é¢„ç½®ç€æ³•åˆ¤æ–­å°†å†›
+    bool InCheck()//ÓÉÔ¤ÖÃ×Å·¨ÅĞ¶Ï½«¾ü
     {
-        int kingNum = SELF_SIDE(playerSide);//æ ¹æ®palyerSideè·å–å°†ç¼–å·
+        int kingNum = SELF_SIDE(playerSide);//¸ù¾İpalyerSide»ñÈ¡½«±àºÅ
         int kingPos = currentPosition[kingNum];
-        int32 selfSide = SELF_SIDE(playerSide);//å°†æ£‹å­ä¸ä¹‹å¼‚æˆ–ä»¥åˆ¤æ–­å½’å±
+        int32 selfSide = SELF_SIDE(playerSide);//½«Æå×ÓÓëÖ®Òì»òÒÔÅĞ¶Ï¹éÊô
         int32 oppoSide = OPPO_SIDE(playerSide);
         int beginPos;
 
-        //å°†è§é¢
+        //½«¼ûÃæ
         for(int i=0;i<=1;i++)
         {
             if ((kingPos & 15) != (currentPosition[oppoSide + KING_FROM] & 15))
@@ -1058,7 +1402,7 @@ struct boardStruct
                 return 1;
         }
 
-        //å…µå°†å†›
+        //±ø½«¾ü
         for(int i=oppoSide+PAWN_FROM;i<=oppoSide+PAWN_TO;i++)
         {
             beginPos=currentPosition[i];
@@ -1069,7 +1413,7 @@ struct boardStruct
                     return 1;
         }
 
-        //é©¬å°†å†›
+        //Âí½«¾ü
         for (int i=oppoSide+KNIGHT_FROM;i<=oppoSide+KNIGHT_TO;i++)
         {
             beginPos=currentPosition[i];
@@ -1080,20 +1424,20 @@ struct boardStruct
                     return 1;
         }
 
-        //è½¦å°†å†›
+        //³µ½«¾ü
         for (int i=oppoSide+ROOK_FROM;i<=oppoSide+ROOK_TO;i++)
         {
             beginPos=currentPosition[i];
             if(beginPos==0)
                 continue;
-            for(int j=0;j<=1;j++)//è¡Œ
+            for(int j=0;j<=1;j++)//ĞĞ
             {
                 if((beginPos>>4)!=(kingPos>>4))
                     continue;
                 if(preMove.rookLinePreMove[beginPos&15][bitLine[beginPos>>4]][j]==(kingPos&15))
                     return 1;
             }
-            for(int j=0;j<=1;j++)//åˆ—
+            for(int j=0;j<=1;j++)//ÁĞ
             {
                 if((beginPos&15)!=(kingPos&15))
                     continue;
@@ -1102,20 +1446,20 @@ struct boardStruct
             }
         }
 
-        //ç‚®å°†å†›
+        //ÅÚ½«¾ü
         for (int i=oppoSide+CANNON_FROM;i<=oppoSide+CANNON_TO;i++)
         {
             beginPos=currentPosition[i];
             if(beginPos==0)
                 continue;
-            for(int j=0;j<=1;j++)//è¡Œ
+            for(int j=0;j<=1;j++)//ĞĞ
             {
                 if((beginPos>>4)!=(kingPos>>4))
                     continue;
                 if(preMove.cannonLinePreCap[beginPos&15][bitLine[beginPos>>4]][j]==(kingPos&15))
                     return 1;
             }
-            for(int j=0;j<=1;j++)//åˆ—
+            for(int j=0;j<=1;j++)//ÁĞ
             {
                 if((beginPos&15)!=(kingPos&15))
                     continue;
@@ -1127,14 +1471,14 @@ struct boardStruct
         return false;
     }
 
-    void NullMove() // èµ°ä¸€æ­¥ç©ºæ­¥
+    void NullMove() // ×ßÒ»²½¿Õ²½
     {         
         mvsList[nowMoveNum++].Set(0,0, 0, zobr.dwKey);  
         ChangeSide();
         nowDepth++;
     }
 
-    void UndoNullMove() // æ’¤æ¶ˆèµ°ä¸€æ­¥ç©ºæ­¥
+    void UndoNullMove() // ³·Ïû×ßÒ»²½¿Õ²½
     {
         nowMoveNum--;
         nowDepth--;
@@ -1142,11 +1486,11 @@ struct boardStruct
     }
 
     /*
-    A. è¿”å›0ï¼Œè¡¨ç¤ºæ²¡æœ‰é‡å¤å±€é¢ï¼›
-    B. è¿”å›1ï¼Œè¡¨ç¤ºå­˜åœ¨é‡å¤å±€é¢ï¼Œä½†åŒæ–¹éƒ½æ— é•¿å°†(åˆ¤å’Œ)ï¼›
-ã€€  C. è¿”å›3(=1+2)ï¼Œè¡¨ç¤ºå­˜åœ¨é‡å¤å±€é¢ï¼Œæœ¬æ–¹å•æ–¹é¢é•¿å°†(åˆ¤æœ¬æ–¹è´Ÿ)ï¼›
-ã€€  D. è¿”å›5(=1+4)ï¼Œè¡¨ç¤ºå­˜åœ¨é‡å¤å±€é¢ï¼Œå¯¹æ–¹å•æ–¹é¢é•¿å°†(åˆ¤å¯¹æ–¹è´Ÿ)ï¼›
-ã€€ã€€E. è¿”å›7(=1+2+4)ï¼Œè¡¨ç¤ºå­˜åœ¨é‡å¤å±€é¢ï¼ŒåŒæ–¹é•¿å°†(åˆ¤å’Œ)ã€‚
+    A. ·µ»Ø0£¬±íÊ¾Ã»ÓĞÖØ¸´¾ÖÃæ£»
+    B. ·µ»Ø1£¬±íÊ¾´æÔÚÖØ¸´¾ÖÃæ£¬µ«Ë«·½¶¼ÎŞ³¤½«(ÅĞºÍ)£»
+¡¡  C. ·µ»Ø3(=1+2)£¬±íÊ¾´æÔÚÖØ¸´¾ÖÃæ£¬±¾·½µ¥·½Ãæ³¤½«(ÅĞ±¾·½¸º)£»
+¡¡  D. ·µ»Ø5(=1+4)£¬±íÊ¾´æÔÚÖØ¸´¾ÖÃæ£¬¶Ô·½µ¥·½Ãæ³¤½«(ÅĞ¶Ô·½¸º)£»
+¡¡¡¡E. ·µ»Ø7(=1+2+4)£¬±íÊ¾´æÔÚÖØ¸´¾ÖÃæ£¬Ë«·½³¤½«(ÅĞºÍ)¡£
     */
     int RepStatus()
     {
@@ -1188,11 +1532,11 @@ struct boardStruct
     }
 
     /***************************************************************************/
-    int DrawValue(void) const // å¹³å±€
+    int DrawValue(void) const // Æ½¾Ö
     {                 
         return (nowDepth & 1) == 0 ? -DRAW_VALUE : DRAW_VALUE;
     }
-    //åˆç†ç€æ³•åˆ¤æ–­
+    //ºÏÀí×Å·¨ÅĞ¶Ï
     bool LegalMove(int32 mv) const 
     {
         int beginPos, endPos;
@@ -1275,10 +1619,10 @@ struct boardStruct
             case CANNON_FROM:
             case CANNON_TO:
             {
-                int line = beginPos >> 4;
-                int col = beginPos & 15;
+                int line = GETLINE(beginPos);
+                int col = GETCOL(beginPos);
                 int bitState = bitLine[line];
-                for (int32 i = 0; i <= 1; i++)//è¡Œ
+                for (int32 i = 0; i <= 1; i++)//ĞĞ
                 {
                     if (!preMove.cannonLinePreCap[col][bitState][i])
                         continue;
@@ -1287,7 +1631,7 @@ struct boardStruct
                 }
 
                 bitState = bitCol[col];
-                for (int32 i = 0; i <= 1; i++)//åˆ—
+                for (int32 i = 0; i <= 1; i++)//ÁĞ
                 {
                     if (!preMove.cannonColPreCap[line][bitState][i])
                         continue;
@@ -1296,14 +1640,14 @@ struct boardStruct
                 }
 
                 bitState = bitLine[line];
-                for (int32 i = preMove.rookLinePreMove[col][bitState][0]; i <= preMove.rookLinePreMove[col][bitState][1]; i++)//ï¿½ï¿½
+                for (int32 i = preMove.rookLinePreMove[col][bitState][0]; i <= preMove.rookLinePreMove[col][bitState][1]; i++)//??
                 {
                     if (endPos == beginPos + i - col&&!currentBoard[endPos])
                         return 1;
                 }
 
                 bitState = bitCol[col];
-                for (int32 i = preMove.rookColPreMove[line][bitState][0]; i <= preMove.rookColPreMove[line][bitState][1]; i++)//ï¿½ï¿½
+                for (int32 i = preMove.rookColPreMove[line][bitState][0]; i <= preMove.rookColPreMove[line][bitState][1]; i++)//??
                 {
                     if (endPos == beginPos + ((i - line) << 4)&& !currentBoard[endPos])
                         return 1;
@@ -1321,12 +1665,16 @@ struct boardStruct
         return 0;
     }
     /***********************************************************************/
-    bool IsProtected(int playerSide, int endPos)
+    bool IsProtected(int playerSide, int endPos,int except=0)
     {
         int selfSide = SELF_SIDE(playerSide);
         for (int chessPieceFrom = selfSide + KING_FROM; chessPieceFrom <= selfSide + PAWN_TO; chessPieceFrom++)
         {
+            if(chessPieceFrom==except)
+                continue;
             int beginPos = currentPosition[chessPieceFrom];
+            if(!beginPos||beginPos==endPos)
+                continue;
             switch (PIECE_INDEX(chessPieceFrom))
             {
                 case KING_FROM:
@@ -1395,14 +1743,14 @@ struct boardStruct
                     int line = beginPos >> 4;
                     int col = beginPos & 15;
                     int bitState = bitLine[line];
-                    for (int32 i = 0; i <= 1; i++)//è¡Œ
+                    for (int32 i = 0; i <= 1; i++)//ĞĞ
                     {
                         if (endPos == beginPos + preMove.cannonLinePreCap[col][bitState][i] - col)
                             return 1;
                     }
 
                     bitState = bitCol[col];
-                    for (int32 i = 0; i <= 1; i++)//åˆ—
+                    for (int32 i = 0; i <= 1; i++)//ÁĞ
                     {
                         if (endPos == beginPos + ((preMove.cannonColPreCap[line][bitState][i] - line) << 4))
                             return 1;
@@ -1457,6 +1805,22 @@ struct boardStruct
             }
         }
         return 0;
+    }
+    // ¼ÆËãMVV/LVAÖµ
+    // ´óÓÚµÈÓÚ1²ÅÓĞ¼ÛÖµ£¬0ÎŞ¼ÛÖµ
+    inline int MvvLva(int beginPos,int endPos) 
+    {
+        int32 beginPiece=currentBoard[beginPos]&15;
+        int32 endPiece=currentBoard[endPos]&15;
+
+        int mvv=MvvLvaVal[endPiece],lva=0;
+
+        if(IsProtected(1^playerSide,endPos))
+            lva=MvvLvaVal[beginPiece];
+
+        if(mvv>=lva)
+            return mvv-lva+1;
+        return (mvv>=3||HOME_HALF(endPos,playerSide));
     }
 };
 

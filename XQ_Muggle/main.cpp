@@ -1,13 +1,14 @@
-﻿#include "log.h"
-#include "base.h"
+﻿#include "base.h"
 #include "move.h"
 #include "ucci.h"
 #include "board.h"
-#include "buffer.h"
 #include "zobrist.h"
 #include "premove.h"
+#ifdef DEBUG
 #include <stdlib.h> 
 #include <windows.h>
+#endif
+
 
 using namespace std;
 
@@ -17,17 +18,24 @@ PreMove preMove;
 bool isNormalEnd = 1;					//标志当前是否正常弹出
 bool openBookFlag = 1;					//标记是否从开局库中查询
 long long beginSearchTime = 0;          //开始搜索的时间
-int32 wmvKiller[LIMIT_DEPTH][2];		//杀手着法表
+int32 KillerMove[LIMIT_DEPTH][2];		//杀手着法表
 uint64_t openBookKey;					//对称局面Key
+
+#ifdef DEBUG
+int nodeNum=0;
+bool debugflag=0;
+#endif
+
 
 extern void ClearHash();
 extern void PreEvaluate();
 
+#ifdef DEBUG
 void printboard()
 {
 	HANDLE handle;//创建句柄 
 	handle = GetStdHandle(STD_OUTPUT_HANDLE);//取标准输入输出句柄 
-	printf("nowPlayer=%d red=%d balck=%d nowVal=%d\n", board.playerSide, board.redVal, board.blackVal, board.Evaluate());
+	printf("nowPlayer=%d red=%d balck=%d specail=%d hold=%d rook=%d knight=%d nowVal=%d\n", board.playerSide, board.redVal, board.blackVal,board.SpeacialShape(),board.StringHold(),board.RookMobility(),board.KnightBlock(), board.Evaluate(-MATE_VALUE,MATE_VALUE));
 	printf("nowDepth=%d movenum=%d incheck=%d\n", board.nowDepth, board.nowMoveNum,board.InCheck());
 	for (int i = 0; i < board.nowMoveNum; i++)
 	{
@@ -77,6 +85,7 @@ void printboard()
 
 		}SetConsoleTextAttribute(handle, 15);
 }
+#endif
 
 int main()
 {	
@@ -89,10 +98,12 @@ int main()
 	else
 	{
 		GetPreMove();
-		std::cout << "id name XQ_Muggle_526" << std::endl;
+#ifdef DEBUG
+		std::cout << "id name XQ_Muggle_new" << std::endl;
 		std::cout << "id copyright 2021-2022 TongJi" << std::endl;
 		std::cout << "id copyright 2021-2022 TongJi" << std::endl;
 		std::cout << "id author Team Ten" << std::endl;
+#endif
 		std::cout << "ucciok" << std::endl;
 		fflush(stdout);
 	}
@@ -113,28 +124,48 @@ int main()
 			board.playerSide = UcciComPosit.player;
 			board.InitValue();
 			Moves(UcciComPosit, board.currentBoard);
-			PreEvaluate();/**/
-			
-			
+			PreEvaluate();
+#ifdef DEBUG
+
 			cout << board.zobr.dwKey << endl;
 			cout << openBookKey << endl;
 			printboard();
+			for(int i=3;i<13;i++)
+			{
+				for(int j=0;j<12;j++)
+				{
+					if(j>=3)
+						printf("%d ",(board.bitLine[i]>>j)&1);
+				}
+				printf("\n");
+			}
+
+			printf("\ncol\n");
+			for(int i=3;i<13;i++)
+			{
+				for(int j=3;j<12;j++)
+					printf("%d ",(board.bitCol[j]>>i)&1);
+				printf("\n");
+			}
+#endif
 
 		}
 		else if (com == comGoTime)
 		{
-			uint16 Move = MainSearch();
-			PrintMoves(Move, getMoves);
+			int32 Move = MainSearch();
 			if (!board.LegalMove(Move))
 			{
-				std::cout << "nobestmove" << std::endl;
-				fflush(stdout);
-				break;
+				SearchMove noBestMove[MAX_MOVES];
+				board.GenerateAllMove(noBestMove);
+				Move = noBestMove[0].move;
 			}
+			PrintMoves(Move, getMoves);
 			std::cout << "bestmove " << getMoves << std::endl;
 
+#ifdef DEBUG
 			board.MakeMove(Move);
 			printboard();
+#endif
 
 			fflush(stdout);
 

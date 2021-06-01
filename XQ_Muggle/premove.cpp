@@ -1,6 +1,7 @@
 #include "base.h"
 #include "board.h"
 
+
 void GetPreMove()
 {
     //将、士、象、马、兵预置数组
@@ -15,7 +16,7 @@ void GetPreMove()
             count=0;
             for(int i=0;i<4;i++)
             {
-                endPos=beginPos+ccKingDelta[i];
+                endPos=beginPos+KingDelta[i];
                 if(IN_FORT(endPos))
                     preMove.kingPreMove[++count][beginPos]=endPos;
             }
@@ -29,7 +30,7 @@ void GetPreMove()
             count=0;
             for(int i=0;i<4;i++)
             {
-                endPos=beginPos+ccAdvisorDelta[i];
+                endPos=beginPos+AdvisorDelta[i];
                 if(IN_FORT(endPos))
                     preMove.advisorPreMove[++count][beginPos]=endPos;
             }
@@ -41,11 +42,11 @@ void GetPreMove()
         count=0;
         for(int i=0;i<4;i++)
         {
-            endPos=beginPos+2*ccAdvisorDelta[i];
+            endPos=beginPos+2*AdvisorDelta[i];
             if(IN_BOARD(endPos)&&SAME_HALF(beginPos,endPos))
             {
                 preMove.bishopPreMove[++count][beginPos]=endPos;
-                preMove.bishopEye[count][beginPos]=beginPos+ccAdvisorDelta[i];
+                preMove.bishopEye[count][beginPos]=beginPos+AdvisorDelta[i];
             }
                 
         }
@@ -57,11 +58,11 @@ void GetPreMove()
         {
             for(int j=0;j<2;j++)
             {
-                endPos=beginPos+ccKnightDelta[i][j];
+                endPos=beginPos+KnightDelta[i][j];
                 if(IN_BOARD(endPos))
                 {
                     preMove.knightPreMove[++count][beginPos]=endPos;
-                    preMove.knightLeg[count][beginPos]=beginPos+ccKingDelta[i];
+                    preMove.knightLeg[count][beginPos]=beginPos+KingDelta[i];
                 }
             }  
         }

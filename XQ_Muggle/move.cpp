@@ -5,11 +5,11 @@
 #include "buffer.h"
 #include "sortmove.h"
 
-const long long MAX_TIME = 2000;        //最长搜索时间
+const long long MAX_TIME =58000;        //最长搜索时间
 
 extern boardStruct board;
 
-extern int32 wmvKiller[LIMIT_DEPTH][2];//杀手着法表
+extern int32 KillerMove[LIMIT_DEPTH][2];//杀手着法表
 
 void PRINT(int Move)
 {
@@ -49,24 +49,27 @@ BestMove QuiescSearchh(boardStruct& board, int Alpha, int Beta)
 */
 int QuiescSearch(int Alpha, int Beta)
 {
+    //杀棋裁剪
     if (-MATE_VALUE + board.nowDepth >= Beta)
         return -MATE_VALUE + board.nowDepth;
     // 重复裁剪；
     int vlRep = board.RepStatus();
     if (vlRep)
-        return board.RepValue(vlRep);/**/
-    if (board.nowDepth == LIMIT_DEPTH)//若达到最大搜索深度返回估值
-    {
-        return board.Evaluate();
-    }
+        return board.RepValue(vlRep);
+    //若达到最大搜索深度返回估值
+    if (board.nowDepth == LIMIT_DEPTH)
+        return board.Evaluate(Alpha,Beta);
+
     int Val = 0, bestVal = -MATE_VALUE;
-    int Moves[MAX_MOVES];
     int numOfMoves=0;
-    if(board.InCheck())//若当前在将军，则返回所有着法
+    SearchMove Moves[MAX_MOVES];
+    //若当前在将军，则返回所有着法
+    int isCheck=board.LastMove().ucbCheck;
+    if(isCheck)
         numOfMoves = SortMove(Moves,HISTORY);
     else
     {
-        Val = board.Evaluate();
+        Val = board.Evaluate(Alpha,Beta);
         if (Val >= Beta)
             return Val;
         bestVal = Val;
@@ -76,15 +79,11 @@ int QuiescSearch(int Alpha, int Beta)
     
     for (int i = 0; i < numOfMoves; i++)//遍历着法
     {
-        board.MakeMove(Moves[i]);
-        board.ChangeSide();
-        if (board.InCheck())
-        {
-            board.UndoMakeMove();
-            board.ChangeSide();
+        if(Moves[i].val<=0&&!isCheck)
+            break;
+        if(!board.MakeMove(Moves[i].val))
             continue;
-        }
-        board.ChangeSide();
+        
         Val = -QuiescSearch(-Beta, -Alpha);
         board.UndoMakeMove();
 
@@ -124,7 +123,108 @@ bool NullOkay()// 判断是否允许空步裁剪
 
 bool NullSafe()// 判断是否允许空步裁剪
 {                 
-    return (board.playerSide == 0 ? board.redVal : board.blackVal) > 230;
+    return (board.playerSide == 0 ? board.redVal : board.blackVal) > 200;
+}
+
+//零窗口完全搜索
+int SearchCut(int depth, int Beta, bool bNoNull = false)
+{
+    if (depth <= 0)
+    {
+#ifdef DEBUG
+        nodeNum++;
+#endif
+        //return board.Evaluate(Beta - 1, Beta);
+        return QuiescSearch(Beta - 1, Beta);
+    }
+
+    if (board.nowDepth == MAX_DEPTH)
+        return board.Evaluate(Beta - 1, Beta);
+
+    if (-MATE_VALUE + board.nowDepth >= Beta)
+        return -MATE_VALUE + board.nowDepth;
+
+    // 重复裁剪；
+    int vlRep = board.RepStatus();
+    if (vlRep)
+        return board.RepValue(vlRep);
+
+
+    //搜索前先在置换表中查找
+    int mvHash = 0;
+    int vl = LookUpHash(Beta - 1, Beta, depth, mvHash);
+    if (vl > -MATE_VALUE)
+        return vl;/**/
+
+    int val = 0, bestVal = -MATE_VALUE, bestMove = 0, hashf = HASH_ALPHA;
+    //尝试空着裁剪；
+    if (!bNoNull && !board.LastMove().ucbCheck && NullOkay())
+    {
+        board.NullMove();
+        val = -SearchCut(depth - R - 1, -Beta + 1, NO_NULL);
+        board.UndoNullMove();
+
+        if (val >= Beta)
+        {
+            if (NullSafe())
+            {
+                //StoreHash(HASH_BETA, 0, val, MAX(depth, 3));
+                return val;
+            }
+            if (SearchCut(depth - R, Beta, NO_NULL) >= Beta)
+            {
+                //StoreHash(HASH_BETA, 0, val, MAX(depth, 2));
+                return val;
+            }
+        }
+    }
+
+    sortMoveStruct MoveSort;
+    int isOnly = 0;
+    if (board.LastMove().ucbCheck)
+    {
+        isOnly = MoveSort.InCheckMove(mvHash);
+    }
+    else
+    {
+        MoveSort.FullInit(mvHash);
+    }
+    int move;
+    while ((move = MoveSort.Next()))//遍历着法
+    {
+        if (!board.MakeMove(move))
+            continue;
+
+        int nextDepth = (board.LastMove().ucbCheck||(isOnly!=0)) ? depth : depth - 1;
+
+        val = -SearchCut(nextDepth, 1 - Beta);
+        board.UndoMakeMove();
+
+        if (val > bestVal)
+        {
+            bestVal = val;
+            if (val >= Beta)//截断
+            {
+                bestMove = move;
+                hashf = HASH_BETA;
+                StoreHash(hashf, bestMove, bestVal, depth);//添加置换项
+                SetBestMove(bestMove, depth, KillerMove[board.nowDepth]);
+                return bestVal;
+            }
+        }
+
+        if (GetTime() - beginSearchTime >= MAX_TIME)
+        {
+            isNormalEnd = 0;
+            return bestVal;
+        }
+    }
+    //不截断
+    if (isNormalEnd)
+    {
+        StoreHash(hashf, isOnly, bestVal, depth);//添加置换项
+    }
+    return bestVal==-MATE_VALUE?board.nowDepth-MATE_VALUE:bestVal;
 }
 
 /*
@@ -136,67 +236,88 @@ int PVS(int depth, int Alpha, int Beta, bool bNoNull)
 {
     
     if (depth<=0)
+    {
+#ifdef DEBUG
+        nodeNum++;
+#endif
         return QuiescSearch(Alpha, Beta);
-
+    }
     if (board.nowDepth == MAX_DEPTH)
-        return board.Evaluate();
+        return board.Evaluate(Alpha,Beta);
 
     if (-MATE_VALUE + board.nowDepth >= Beta)
         return -MATE_VALUE + board.nowDepth;
     // 重复裁剪；
-    /**/int vlRep = board.RepStatus();
+    int vlRep = board.RepStatus();
     if (vlRep)
         return board.RepValue(vlRep);
 
+#ifdef DEBUG
+    if(debugflag)
+        printf("before hash\n");
+#endif
+    
 
     //搜索前先在置换表中查找
-    int mv=0;
-    int vl = LookUpHash(Alpha, Beta, depth ,mv);
+    int mvHash=0;
+    int vl = LookUpHash(Alpha, Beta, depth ,mvHash);
     if (vl > -MATE_VALUE)
         return vl;/**/
+
+#ifdef DEBUG
+    if(debugflag)
+        printf("before null\n");
+#endif   
     
     int val = 0, bestVal = -MATE_VALUE, bestMove = 0,hashf = HASH_ALPHA;
-    //尝试空着裁剪；
-    if (!bNoNull && !board.InCheck() && NullOkay()) 
-    {
-        board.NullMove();
-        val = -PVS(depth-R-1, -Beta, -Beta + 1, NO_NULL);
-        board.UndoNullMove();
-
-        if (val >= Beta) 
-        {
-            if (NullSafe()) return val;
-            if (PVS(depth - R, Alpha, Beta, NO_NULL)>= Beta)
-                return val;
-        }
-    }
 
     sortMoveStruct MoveSort;
-    MoveSort.Init();
+    int isOnly=0;
+    if(board.LastMove().ucbCheck)
+    {
+        isOnly=MoveSort.InCheckMove(mvHash);
+    }
+    else
+    {
+        MoveSort.FullInit(mvHash);
+    }
     int move;
+    //if(debugflag)
+    //    printf("before search\n");
     while ((move = MoveSort.Next()))//遍历着法
     {
-        
-        board.MakeMove(move);
-        board.ChangeSide();
-        if (board.InCheck())
-        {
-            board.UndoMakeMove();
-            board.ChangeSide();
+        //PRINT(move);
+        //printf(" side=%d depth=%d pvs\n",board.playerSide,depth);
+        if (!board.MakeMove(move))
             continue;
-        }
-        board.ChangeSide();
 
-        int nextDepth=board.InCheck()?depth:depth-1;
+#ifdef DEBUG
+        if(debugflag)
+        {
+            PRINT(move);
+            printf("before depth=%d val=%d bestval=%d\n",depth,val,bestVal);
+        }
+#endif
+        
+        int nextDepth=(board.LastMove().ucbCheck||(isOnly!=0))?depth:depth-1;
         if (bestVal == -MATE_VALUE)
             val = -PVS(nextDepth, -Beta, -Alpha);
         else
         {
-            val = -PVS(nextDepth,-Alpha - 1, -Alpha);
+            val = -SearchCut(nextDepth, -Alpha);
+            //val = -PVS(nextDepth, -bestVal - 1, -bestVal);
             if (val > Alpha&& val < Beta)
                 val = -PVS(nextDepth,-Beta, -Alpha);
         }
         board.UndoMakeMove();
+#ifdef DEBUG
+        if(debugflag)
+        {
+            PRINT(move);
+            printf(" depth=%d val=%d bestval=%d\n",depth,val,bestVal);
+        }
+#endif
+        
 
         if (val > bestVal)
         {
@@ -226,41 +347,49 @@ int PVS(int depth, int Alpha, int Beta, bool bNoNull)
     if (isNormalEnd)
     {
         StoreHash(hashf,bestMove, bestVal, depth);//添加置换项
-        SetBestMove(bestMove, depth, wmvKiller[board.nowDepth]);
+        SetBestMove(bestMove, depth, KillerMove[board.nowDepth]);
     }
     
-    return bestVal;
+    return bestVal==-MATE_VALUE?board.nowDepth-MATE_VALUE:bestVal;
 }
-
 
 int searchRoot(int depth)
 {
     int val = 0, bestVal = -MATE_VALUE, bestMove = 0;
     sortMoveStruct MoveSort;
-    MoveSort.Init();
+    int isOnly=0;
+    if(board.InCheck())
+    {
+        isOnly=MoveSort.InCheckMove(0);
+    }
+    else
+    {
+        MoveSort.FullInit(0);
+    }
     int move;
     while ((move = MoveSort.Next()))//遍历着法
     {
-        board.MakeMove(move);
-        board.ChangeSide();
-        if (board.InCheck())
+        if (!board.MakeMove(move))
+            continue;
+        //判断是否吃将
+        if (!board.currentPosition[SELF_SIDE(board.playerSide) + KING_FROM]) 
         {
             board.UndoMakeMove();
-            board.ChangeSide();
-            continue;
+            return move;
         }
-        board.ChangeSide();
 
-        int nextDepth = board.InCheck() ? depth : depth - 1;
+        int nextDepth = board.LastMove().ucbCheck ? depth : depth - 1;
         if (bestVal == -MATE_VALUE)
             val = -PVS(nextDepth, -MATE_VALUE, MATE_VALUE,1);
         else
         {
-            val = -PVS(nextDepth, -bestVal - 1, -bestVal);
+            val = -SearchCut(nextDepth, -bestVal);
+            //val = -PVS(nextDepth, -bestVal - 1, -bestVal);
             if (val > bestVal)
                 val = -PVS(nextDepth, -MATE_VALUE, -bestVal,1);
         }
         board.UndoMakeMove();
+        
 
         if (val > bestVal)
         {
@@ -276,7 +405,7 @@ int searchRoot(int depth)
         }
     }
     if(isNormalEnd)
-        SetBestMove(bestMove, depth, wmvKiller[board.nowDepth]);
+        SetBestMove(bestMove, depth, KillerMove[board.nowDepth]);
     return bestMove;
 }
 
@@ -287,8 +416,9 @@ int MainSearch(boardStruct& board)
 int MainSearch()
 {
     beginSearchTime= GetTime();
-
-    /*if (openBookFlag)
+#define OPENBOOK
+#ifdef OPENBOOK
+    if (openBookFlag)
     {
         int chooseFrom = 0;
         int index1 = lower_bound(OpenBook, OpenBook + 596737, Book{ board.zobr.dwKey,0 }) - OpenBook;
@@ -308,7 +438,7 @@ int MainSearch()
             uint16 Move = OpenBook[index2].Move;
             uint8 Begin = Move & 255;
             uint8 End = Move >> 8;
-            printf("begin=%d end=%d\n", Begin, End);
+            //printf("begin=%d end=%d\n", Begin, End);
             Begin = Begin  - ((Begin & 15)<<1)+ 14;
             End = End  - ((End & 15) << 1)+ 14;
             Move = (End << 8) + Begin;
@@ -319,19 +449,25 @@ int MainSearch()
         if(chooseFrom==1)
             return OpenBook[index1].Move;
         openBookFlag = 0;
-    }*/
+    }
+#endif
     
 
     int Move = 0;
     isNormalEnd = 1;
-    int depth = 2;
+    int depth = 1;
+    //long long lastTime=beginSearchTime;
+
     while (isNormalEnd&&depth<=MAX_DEPTH)
     {
-        memset(path, 0, sizeof(path));
-        int tmpMove = searchRoot(depth);
+        
+        
+        int tmpMove = searchRoot(depth/*,rootMoveSort*/);
         if (!isNormalEnd)
             break;
-        printf("depth=%d time=%lld move=%d ", depth,GetTime()-beginSearchTime,tmpMove);
+#ifdef DEBUG
+        printf("depth=%d thistime=%lld tottime=%lld nodeNum=%d move=%d ", depth,GetTime()-lastTime,GetTime()-beginSearchTime,nodeNum,tmpMove);
+        lastTime=GetTime();
         PRINT(tmpMove);
         printf("\n");
         int i;
@@ -341,6 +477,9 @@ int MainSearch()
             printf("(%d) -> ",path[i].Val);
         }
         printf(" i=%d\n\n",i);
+        nodeNum=0;
+        memset(path, 0, sizeof(path));
+#endif
         if (isNormalEnd&&tmpMove)
             Move = tmpMove;
         depth++;
